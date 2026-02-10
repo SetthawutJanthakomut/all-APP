@@ -1,0 +1,3198 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ศูนย์รวมระบบงาน</title>
+    <meta http-equiv="Permissions-Policy" content="interest-cohort=()">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <meta name="google-signin-client_id" content="YOUR_CLIENT_ID.apps.googleusercontent.com">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Kanit', sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    /* ========== Login Screen ========== */
+    .login-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80vh;
+    }
+    
+    .login-box {
+      background: white;
+      border-radius: 24px;
+      padding: 60px 50px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 450px;
+      width: 100%;
+      animation: scaleIn 0.5s ease-out;
+    }
+    
+    .login-box h1 {
+      font-size: 36px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+    
+    .login-box p {
+      color: #666;
+      font-size: 16px;
+      margin-bottom: 40px;
+    }
+    
+    .login-icon {
+      font-size: 80px;
+      margin-bottom: 30px;
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    .google-btn {
+      background: white;
+      border: 2px solid #e4e6eb;
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-family: 'Kanit', sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .google-btn:hover {
+      border-color: #667eea;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .google-icon {
+      width: 24px;
+      height: 24px;
+    }
+    
+    /* ========== Main App ========== */
+    .main-app {
+      display: none;
+    }
+    
+    .main-app.show {
+      display: block;
+    }
+    
+    /* ========== Header ========== */
+.header {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  padding: 20px 30px;
+  margin-bottom: 30px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  animation: slideDown 0.6s ease-out;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.header-left h1 {
+  font-size: 32px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 5px;
+}
+
+.header-left p {
+  color: #666;
+  font-size: 14px;
+  font-weight: 300;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.user-info {
+  text-align: right;
+  padding-right: 15px;
+  border-right: 2px solid #e4e6eb;
+}
+
+.user-email {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.admin-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.btn-logout {
+  background: #f5f6f7;
+  color: #666;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-family: 'Kanit', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.btn-logout:hover {
+  background: #e4e6eb;
+  transform: translateY(-2px);
+}
+
+.btn-add, .btn-manage {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-family: 'Kanit', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+    position: relative; /* ✅ เพิ่มบรรทัดนี้ */
+  overflow: visible; /* ✅ เพิ่มบรรทัดนี้ */
+}
+
+.btn-manage {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);
+}
+
+.btn-add:hover, .btn-manage:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+#userButtons, #adminButtons {
+  display: flex;
+  gap: 10px;
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 1200px) {
+  .header {
+    padding: 20px 25px;
+  }
+  
+  .btn-add, .btn-manage {
+    padding: 10px 18px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 992px) {
+  .header-left h1 {
+    font-size: 28px;
+  }
+  
+  .header-left p {
+    font-size: 13px;
+  }
+  
+  /* ซ่อนข้อความ แสดงแค่ไอคอน */
+  .btn-add span:last-child, 
+  .btn-manage span:last-child {
+    display: none;
+  }
+  
+  .btn-add, .btn-manage {
+    padding: 10px;
+    min-width: 40px;
+    justify-content: center;
+  }
+  
+  .btn-add span:first-child, 
+  .btn-manage span:first-child {
+    font-size: 18px;
+    margin: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+  
+  .header-left {
+    width: 100%;
+  }
+  
+  .header-left h1 {
+    font-size: 26px;
+  }
+  
+  .header-right {
+    width: 100%;
+    justify-content: center;
+    flex-direction: column !important;
+    gap: 12px;
+  }
+  
+  .user-info {
+    text-align: center;
+    padding: 0 0 12px 0;
+    border-right: none;
+    border-bottom: 2px solid #e4e6eb;
+    width: 100%;
+    margin-right: 0;
+  }
+  
+  #userButtons, #adminButtons {
+    width: 100%;
+    flex-direction: column !important;
+    gap: 10px;
+  }
+  
+  .btn-add, .btn-manage, .btn-logout {
+    width: 100% !important;
+    justify-content: center;
+    padding: 14px 20px !important;
+  }
+  
+  /* แสดงข้อความกลับมาใน Mobile */
+  .btn-add span:last-child, 
+  .btn-manage span:last-child {
+    display: inline !important;
+  }
+  
+  .btn-add span:first-child, 
+  .btn-manage span:first-child {
+    font-size: 16px;
+  }
+  
+  .apps-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+  }
+  
+  .apps-checkboxes {
+    grid-template-columns: 1fr;
+  }
+  
+  .login-box {
+    padding: 40px 30px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-left h1 {
+    font-size: 24px;
+  }
+  
+  .header-left p {
+    font-size: 12px;
+  }
+  
+  .user-email {
+    font-size: 12px;
+  }
+  
+  .btn-add, .btn-manage, .btn-logout {
+    font-size: 14px;
+    padding: 12px 16px !important;
+  }
+}
+    
+  /* ========== Apps Grid ========== */
+.apps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: clamp(20px, 2.5vw, 30px);
+  padding: 20px 10px;
+  animation: fadeIn 0.8s ease-out;
+  max-width: 100%;
+}
+
+/* 1 card only - center it */
+.apps-grid.single-card {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.apps-grid.single-card .app-card {
+  max-width: 400px;
+  width: 100%;
+}
+
+/* ========== App Card ========== */
+.app-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  padding: clamp(25px, 3vw, 35px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: slideUp 0.6s ease-out;
+  animation-fill-mode: both;
+  border: 2px solid transparent;
+}
+
+.app-card:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 20px 50px rgba(102, 126, 234, 0.3);
+  border-color: rgba(102, 126, 234, 0.2);
+}
+
+.app-icon {
+  width: clamp(80px, 10vw, 120px);
+  height: clamp(80px, 10vw, 120px);
+  border-radius: 20px;
+  margin-bottom: clamp(18px, 2.5vw, 28px);
+  object-fit: cover;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 3px solid rgba(255, 255, 255, 0.8);
+}
+
+.app-card:hover .app-icon {
+  transform: scale(1.08) rotate(-3deg);
+  box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4);
+}
+
+.app-name {
+  font-size: clamp(16px, 2vw, 22px);
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 14px;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+}
+
+.app-owner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: clamp(12px, 1.3vw, 15px);
+  color: #666;
+  background: linear-gradient(135deg, #f5f6f7 0%, #e9ecef 100%);
+  padding: clamp(6px, 1vw, 10px) clamp(14px, 2vw, 18px);
+  border-radius: 25px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.app-actions {
+  position: absolute;
+  top: clamp(12px, 2vw, 20px);
+  right: clamp(12px, 2vw, 20px);
+  display: flex;
+  gap: clamp(8px, 1.2vw, 12px);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.app-card:hover .app-actions {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+.btn-edit, .btn-delete {
+  width: clamp(38px, 5vw, 46px);
+  height: clamp(38px, 5vw, 46px);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(16px, 2vw, 20px);
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: #666;
+}
+
+.btn-edit:hover {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  transform: scale(1.15) rotate(5deg);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-delete:hover {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  transform: scale(1.15) rotate(-5deg);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ========== Responsive Grid ========== */
+@media (min-width: 1400px) {
+  .apps-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1399px) {
+  .apps-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .apps-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (max-width: 767px) {
+  .apps-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 15px 5px;
+  }
+  
+  .app-card {
+    max-width: 100%;
+    padding: 25px 20px;
+  }
+  
+  .app-icon {
+    width: 90px;
+    height: 90px;
+  }
+  
+  .app-name {
+    font-size: 18px;
+  }
+  
+  .app-owner {
+    font-size: 13px;
+  }
+  
+  .app-actions {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .apps-grid {
+    gap: 15px;
+  }
+  
+  .app-card {
+    padding: 20px 15px;
+    border-radius: 20px;
+  }
+  
+  .app-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 16px;
+  }
+  
+  .app-name {
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+  
+  .app-owner {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+}
+    
+    /* ========== Modal ========== */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(5px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease-out;
+      overflow-y: auto;
+    }
+    
+    .modal.show {
+      display: flex;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 24px;
+      padding: 40px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: modalSlideUp 0.4s ease-out;
+      margin: 40px 0;
+    }
+    
+    .modal-content.large {
+      max-width: 800px;
+    }
+    
+    @keyframes modalSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .modal-header {
+      margin-bottom: 30px;
+    }
+    
+    .modal-header h2 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 5px;
+    }
+    
+    .modal-header p {
+      color: #999;
+      font-size: 14px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    
+    input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #e4e6eb;
+      border-radius: 12px;
+      font-family: 'Kanit', sans-serif;
+      font-size: 15px;
+      transition: all 0.3s ease;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+    
+    .modal-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 30px;
+    }
+    
+    .btn {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Kanit', sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-cancel {
+      background: #f5f6f7;
+      color: #666;
+    }
+    
+    .btn-cancel:hover {
+      background: #e4e6eb;
+    }
+    
+    .btn-submit {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    /* ========== Users Management ========== */
+    .users-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .user-item {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+      position: relative;
+    }
+    
+    .user-email-display {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 12px;
+      font-size: 16px;
+    }
+    
+    .apps-checkboxes {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .checkbox-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    
+    .checkbox-item label {
+      font-size: 14px;
+      color: #555;
+      margin: 0;
+      cursor: pointer;
+    }
+    
+    .user-actions-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn-save-user, .btn-delete-user {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Kanit', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-save-user {
+      background: #10b981;
+      color: white;
+    }
+    
+    .btn-delete-user {
+      background: #ef4444;
+      color: white;
+    }
+    
+    .btn-add-user {
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    
+    .new-user-form {
+      background: #f0f7ff;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    .new-user-form.show {
+      display: block;
+    }
+    
+    /* ========== Loading & Messages ========== */
+    .loading {
+  text-align: center;
+  padding: 60px;
+  color: white;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.loading p {
+  font-size: 18px;
+  margin-top: 10px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+    
+    .spinner {
+      width: 50px;
+      height: 50px;
+      margin: 0 auto 20px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .message {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      z-index: 2000;
+      display: none;
+      animation: slideInRight 0.4s ease-out;
+    }
+    
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(100px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    
+    .message.show {
+      display: block;
+    }
+    
+    .message.success {
+      border-left: 4px solid #10b981;
+    }
+    
+    .message.error {
+      border-left: 4px solid #ef4444;
+    }
+    
+    /* ========== Empty State ========== */
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 24px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+    
+    .empty-state h3 {
+      font-size: 24px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+    
+    .empty-state p {
+      color: #999;
+      font-size: 16px;
+    }
+    
+    /* ========== Responsive ========== */
+    @media (max-width: 768px) {
+      .header {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+      }
+      
+      .header-right {
+        flex-direction: column;
+      }
+      
+      .user-info {
+        text-align: center;
+        margin-right: 0;
+      }
+      
+      .apps-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+      }
+      
+      .apps-checkboxes {
+        grid-template-columns: 1fr;
+      }
+      
+      .login-box {
+        padding: 40px 30px;
+      }
+      .pending-user {
+  border-left: 4px solid #f59e0b !important;
+  background: #fffbeb !important;
+}
+
+.pending-badge {
+  display: inline-block;
+  background: #f59e0b;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 10px;
+}
+
+.user-detail {
+  font-size: 14px;
+  color: #666;
+  margin-top: 8px;
+  padding-left: 5px;
+}
+
+.user-detail strong {
+  color: #333;
+  font-weight: 600;
+}
+
+textarea {
+  transition: all 0.3s ease;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1) !important;
+}
+/* ========== Reports List ========== */
+.reports-list {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.report-item {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 15px;
+  position: relative;
+  border-left: 4px solid #667eea;
+}
+
+.report-item.status-pending {
+  border-left-color: #f59e0b;
+}
+
+.report-item.status-working {
+  border-left-color: #3b82f6;
+}
+
+.report-item.status-done {
+  border-left-color: #10b981;
+}
+
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.report-user {
+  font-weight: 600;
+  color: #333;
+  font-size: 16px;
+}
+
+.report-time {
+  font-size: 13px;
+  color: #999;
+}
+
+.report-status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 10px;
+}
+
+.report-status.pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.report-status.working {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.report-status.done {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.report-message {
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  color: #333;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.report-reply {
+  background: #f0f7ff;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 10px;
+  border-left: 3px solid #667eea;
+}
+
+.report-reply-label {
+  font-size: 12px;
+  color: #667eea;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.report-reply-text {
+  color: #333;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.report-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.btn-reply, .btn-delete-report {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Kanit', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-reply {
+  background: #667eea;
+  color: white;
+}
+
+.btn-reply:hover {
+  background: #5568d3;
+}
+
+.btn-delete-report {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-delete-report:hover {
+  background: #dc2626;
+}
+
+select {
+  transition: all 0.3s ease;
+}
+
+select:focus {
+  outline: none;
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1) !important;
+}
+
+
+/* เพิ่มใน <style> */
+.report-item.status-rejected {
+  border-left-color: #ef4444;
+  opacity: 0.7;
+}
+
+.report-status.rejected {
+  background: #fee2e2;
+  color: #dc2626;
+}
+/* iOS Native Badge Style */
+.ios-badge-counter {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #FF3B30;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  padding: 2px 6px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px white, 0 2px 4px rgba(0, 0, 0, 0.3);
+  line-height: 1;
+  letter-spacing: -0.2px;
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.ios-badge-counter.large {
+  min-width: 24px;
+  padding: 2px 6px;
+}
+
+.ios-badge-counter.hidden {
+  display: none !important;
+}
+
+.ios-badge-counter.pulse {
+  animation: badgePulse 0.3s ease;
+}
+
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Screen -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-box">
+      <div class="login-icon">🚀</div>
+      <h1>ศูนย์รวมระบบงาน</h1>
+      <p>เข้าสู่ระบบด้วย Google Account</p>
+      <button class="google-btn" onclick="handleGoogleLogin()">
+        <svg class="google-icon" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        เข้าสู่ระบบด้วย Google
+      </button>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div class="main-app" id="mainApp">
+    <div class="container">
+      <div class="header">
+        <div class="header-left">
+          <h1>🚀 ศูนย์รวมระบบงาน</h1>
+          <p>เลือกระบบงานที่ต้องการใช้งาน</p>
+        </div>
+       <div class="header-right">
+  <div class="user-info">
+    <div class="user-email" id="userEmail">Loading...</div>
+    <div id="adminBadge"></div>
+  </div>
+  
+  <!-- ปุ่มสำหรับ User ทั่วไป -->
+  <div id="userButtons" style="display: none; flex-direction: row; gap: 10px;">
+    <button class="btn-manage" onclick="openRequestModal()">
+      <span>📝</span>
+      <span>ขอสิทธิ์</span>
+    </button>
+    <button class="btn-manage" onclick="openReportModal()">
+      <span>📢</span>
+      <span>รายงาน</span>
+    </button>
+    <button class="btn-manage" onclick="openManualPage()">
+     <span>📚</span>
+     <span>คู่มือ</span>
+   </button>
+
+  </div>
+  
+<!-- แก้ไขใน <div id="adminButtons"> -->
+<div id="adminButtons" style="display: none; flex-direction: row; gap: 10px;">
+  <button class="btn-add" onclick="openModal()">
+    <span>➕</span>
+    <span>เพิ่มแอป</span>
+  </button>
+  <button class="btn-manage" onclick="openManageModal()">
+    <span>👥</span>
+    <span>จัดการสิทธิ์</span>
+  </button>
+    <button class="btn-manage" onclick="openManageAdminsModal()" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+    <span>👑</span>
+    <span>จัดการ Admin</span>
+  </button>
+
+  <button class="btn-manage" onclick="openViewRequestsModal()" style="position: relative;">
+    <span>📝</span>
+    <span>คำขอเข้าใช้</span>
+    <span class="ios-badge-counter hidden" id="badgeRequests">0</span>
+  </button>
+
+  <button class="btn-manage" onclick="openViewReportsModal()" style="position: relative;">
+    <span>📋</span>
+    <span>ดูรายงาน</span>
+    <span class="ios-badge-counter hidden" id="badgeReports">0</span>
+  </button>
+
+  <button class="btn-manage" onclick="openNewLinkModal()">
+    <span>🔗</span>
+    <span>New Link</span>
+  </button>
+  <button class="btn-manage" onclick="openManualPage()">
+    <span>📚</span>
+    <span>คู่มือ</span>
+  </button>
+</div>
+  
+  <!-- ปุ่มออกจากระบบ -->
+  <button class="btn-logout" onclick="handleLogout()">
+    🚪 ออกจากระบบ
+  </button>
+</div>
+      
+<div id="appsContainer">
+  <div class="loading">
+    <div class="spinner"></div>
+    <p id="loadingText">กำลังเชื่อมต่อ Google Apps Script...</p>
+  </div>
+</div>
+    </div>
+  </div>
+  
+  <!-- Add/Edit App Modal -->
+  <div class="modal" id="addModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">✨ เพิ่มระบบงานใหม่</h2>
+        <p id="modalDesc">กรอกข้อมูลระบบงานที่ต้องการเพิ่ม</p>
+      </div>
+
+      <form id="addForm">
+  <input type="hidden" id="editMode" value="false">
+  <input type="hidden" id="oldAppName" value="">
+  
+  <div class="form-group">
+    <label>ชื่อระบบงาน</label>
+    <input type="text" id="appName" required placeholder="เช่น Survey Work System">
+  </div>
+  
+  <div class="form-group">
+    <label>URL ของระบบ</label>
+    <input type="url" id="appUrl" required placeholder="https://...">
+  </div>
+  
+  <div class="form-group">
+    <label>URL รูปภาพ (ไอคอน)</label>
+    <input type="url" id="appPhoto" required placeholder="https://...">
+  </div>
+
+  <div class="form-group">
+    <div style="display: flex; align-items: center; gap: 10px; background: #f0f7ff; padding: 10px; border-radius: 8px; border: 1px solid #cce5ff;">
+      <input type="checkbox" id="appPublic" style="width: 20px; height: 20px; margin: 0; cursor: pointer;">
+      <label for="appPublic" style="margin: 0; cursor: pointer; color: #1565c0; font-weight: 500;">
+        🌍 เปิดให้ทุกคนเข้าถึงได้ (Public App)
+      </label>
+    </div>
+    <small style="color: #666; display: block; margin-top: 5px; margin-left: 10px; font-size: 12px;">
+      * หากติ๊กเลือก ผู้ใช้ทุกคนจะเห็นและเข้าใช้งานแอปนี้ได้ทันทีโดยไม่ต้องขอสิทธิ์
+    </small>
+  </div>
+  <div class="modal-buttons">
+    <button type="button" class="btn btn-cancel" onclick="closeModal()">ยกเลิก</button>
+    <button type="submit" class="btn btn-submit" id="submitBtn">เพิ่มระบบงาน</button>
+  </div>
+</form>
+    </div>
+  </div>
+  
+  <!-- Manage Permissions Modal -->
+  <div class="modal" id="manageModal">
+    <div class="modal-content large">
+      <div class="modal-header">
+        <h2>👥 จัดการสิทธิ์ผู้ใช้งาน</h2>
+        <p>เพิ่มหรือแก้ไขสิทธิ์การเข้าถึงระบบงานของผู้ใช้</p>
+      </div>
+      
+      <button class="btn btn-submit btn-add-user" onclick="toggleNewUserForm()">
+        ➕ เพิ่มผู้ใช้ใหม่
+      </button>
+
+
+      
+      <div class="new-user-form" id="newUserForm">
+        <div class="form-group">
+          <label>อีเมลผู้ใช้</label>
+          <input type="email" id="newUserEmail" placeholder="user@example.com">
+        </div>
+        <div class="form-group">
+          <label>เลือกระบบงานที่อนุญาต</label>
+          <div class="apps-checkboxes" id="newUserApps"></div>
+        </div>
+        <div class="modal-buttons">
+          <button type="button" class="btn btn-cancel" onclick="toggleNewUserForm()">ยกเลิก</button>
+          <button type="button" class="btn btn-submit" onclick="addNewUser()">บันทึก</button>
+        </div>
+      </div>
+      
+      <div class="users-list" id="usersList">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>กำลังโหลดข้อมูลผู้ใช้...</p>
+        </div>
+      </div>
+      
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-cancel" onclick="closeManageModal()">ปิด</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="message" id="message"></div>
+
+<div class="modal" id="requestModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>📝 ขอสิทธิ์เข้าใช้ระบบ</h2>
+      <p>กรอกข้อมูลและเลือกแอปที่ต้องการใช้งาน</p>
+    </div>
+    <form id="requestForm">
+      <div class="form-group">
+        <label>ชื่อ-นามสกุล *</label>
+        <input type="text" id="requestName" required placeholder="กรอกชื่อ-นามสกุล">
+      </div>
+      
+      <div class="form-group">
+        <label>เลือกแอปที่ต้องการใช้งาน * <span style="color: #999; font-size: 12px;">(เลือกได้มากกว่า 1)</span></label>
+        <div id="requestAppsCheckboxes" class="apps-checkboxes" style="max-height: 250px; overflow-y: auto; border: 2px solid #e4e6eb; border-radius: 12px; padding: 15px; background: #f8f9fa;">
+          <div class="loading">
+            <p style="color: #666; font-size: 14px;">กำลังโหลดรายการแอป...</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>หมายเหตุ</label>
+        <textarea id="requestNote" rows="4" style="width: 100%; padding: 14px 16px; border: 2px solid #e4e6eb; border-radius: 12px; font-family: 'Kanit', sans-serif; font-size: 15px; resize: vertical;" placeholder="เช่น ต้องการใช้งานเพื่อ..."></textarea>
+      </div>
+      
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-cancel" onclick="closeRequestModal()">ยกเลิก</button>
+        <button type="submit" class="btn btn-submit">ส่งคำขอ</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+  <!-- Report Problem Modal -->
+  <div class="modal" id="reportModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📢 รายงานปัญหา/ข้อเสนอแนะ</h2>
+        <p>แจ้งปัญหาหรือข้อเสนอแนะเกี่ยวกับระบบ</p>
+      </div>
+      <form id="reportForm">
+        <div class="form-group">
+          <label>ข้อความ *</label>
+          <textarea id="reportMessage" rows="6" style="width: 100%; padding: 14px 16px; border: 2px solid #e4e6eb; border-radius: 12px; font-family: 'Kanit', sans-serif; font-size: 15px; resize: vertical;" required placeholder="อธิบายปัญหาหรือข้อเสนอแนะ..."></textarea>
+        </div>
+        <div class="modal-buttons">
+          <button type="button" class="btn btn-cancel" onclick="closeReportModal()">ยกเลิก</button>
+          <button type="submit" class="btn btn-submit">ส่งรายงาน</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- New Link Modal -->
+<div class="modal" id="newLinkModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>🔗 อัปเดตลิงค์ศูนย์รวมระบบงาน</h2>
+      <p>อัปเดตลิงค์ใหม่และส่งอีเมลแจ้งทุกคน</p>
+    </div>
+    
+    <div style="background: #f0f7ff; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+      <div style="font-size: 13px; color: #666; margin-bottom: 5px;">📍 ลิงค์ปัจจุบัน:</div>
+      <div id="currentLinkDisplay" style="font-size: 14px; color: #667eea; word-break: break-all; font-weight: 500;">กำลังโหลด...</div>
+    </div>
+    
+    <form id="newLinkForm">
+      <div class="form-group">
+        <label>ลิงค์ใหม่ *</label>
+        <input type="url" id="newLinkUrl" required placeholder="https://script.google.com/macros/s/...">
+      </div>
+      <div style="background: #fff3cd; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
+        <div style="font-size: 13px; color: #856404;">
+          <strong>⚠️ หมายเหตุ:</strong> ระบบจะอัปเดตลิงค์ใน Sheet "Link" และส่งอีเมลแจ้งเตือนให้ผู้ใช้ทุกคนในระบบ
+        </div>
+      </div>
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-cancel" onclick="closeNewLinkModal()">ยกเลิก</button>
+        <button type="submit" class="btn btn-submit">อัปเดตและส่งอีเมล</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+  <!-- View Reports Modal -->
+<div class="modal" id="viewReportsModal">
+  <div class="modal-content large">
+    <div class="modal-header">
+      <h2>📋 รายงานปัญหา/ข้อเสนอแนะ</h2>
+      <p>ดูและตอบกลับรายงานจากผู้ใช้งาน</p>
+    </div>
+    
+    <div class="reports-list" id="reportsList">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>กำลังโหลดรายงาน...</p>
+      </div>
+    </div>
+    
+    <div class="modal-buttons">
+      <button type="button" class="btn btn-cancel" onclick="closeViewReportsModal()">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reply Report Modal -->
+<div class="modal" id="replyReportModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>✉️ ตอบกลับรายงาน</h2>
+      <p>ตอบกลับและอัปเดตสถานะ</p>
+    </div>
+    <form id="replyReportForm">
+      <input type="hidden" id="replyRowIndex" value="">
+      <div class="form-group">
+        <label>สถานะ</label>
+        <select id="replyStatus" style="width: 100%; padding: 14px 16px; border: 2px solid #e4e6eb; border-radius: 12px; font-family: 'Kanit', sans-serif; font-size: 15px;">
+          <option value="รอดำเนินการ">รอดำเนินการ</option>
+          <option value="กำลังแก้ไข">กำลังแก้ไข</option>
+          <option value="เสร็จสิ้น">เสร็จสิ้น</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>คำตอบ/แนวทางแก้ไข *</label>
+        <textarea id="replyMessage" rows="6" style="width: 100%; padding: 14px 16px; border: 2px solid #e4e6eb; border-radius: 12px; font-family: 'Kanit', sans-serif; font-size: 15px; resize: vertical;" required placeholder="กรอกคำตอบหรือแนวทางแก้ไขปัญหา..."></textarea>
+      </div>
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-cancel" onclick="closeReplyReportModal()">ยกเลิก</button>
+        <button type="submit" class="btn btn-submit">ส่งคำตอบ</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal" id="viewRequestsModal">
+  <div class="modal-content large">
+    <div class="modal-header">
+      <h2>📝 คำขอเข้าใช้ระบบ</h2>
+      <p>ดูและจัดการคำขอจากผู้ใช้งาน</p>
+    </div>
+    
+    <div class="reports-list" id="requestsList">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>กำลังโหลดคำขอ...</p>
+      </div>
+    </div>
+    
+    <div class="modal-buttons">
+      <button type="button" class="btn btn-cancel" onclick="closeViewRequestsModal()">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reject Request Modal -->
+<div class="modal" id="rejectRequestModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>❌ ปฏิเสธคำขอ</h2>
+      <p>ระบุเหตุผลในการปฏิเสธ</p>
+    </div>
+    <form id="rejectRequestForm">
+      <input type="hidden" id="rejectRowIndex" value="">
+      <input type="hidden" id="rejectUserEmail" value="">
+      
+      <div class="form-group">
+        <label>เหตุผล *</label>
+        <textarea id="rejectReason" rows="4" style="width: 100%; padding: 14px 16px; border: 2px solid #e4e6eb; border-radius: 12px; font-family: 'Kanit', sans-serif; font-size: 15px; resize: vertical;" required placeholder="เช่น ข้อมูลไม่ครบถ้วน, ไม่มีความจำเป็น..."></textarea>
+      </div>
+      
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-cancel" onclick="closeRejectRequestModal()">ยกเลิก</button>
+        <button type="submit" class="btn btn-submit" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">ปฏิเสธ</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Manage Admins Modal -->
+<div class="modal" id="manageAdminsModal">
+  <div class="modal-content large">
+    <div class="modal-header">
+      <h2>👑 จัดการผู้ดูแลระบบ</h2>
+      <p>เพิ่มหรือลบสิทธิ์ Admin</p>
+    </div>
+    
+    <div style="background: #fff3cd; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
+      <div style="font-size: 14px; color: #856404;">
+        <strong>⚠️ คำเตือน:</strong> Admin มีสิทธิ์เต็มในการจัดการระบบ รวมถึงการเพิ่ม/ลบ Admin คนอื่น กรุณาพิจารณาอย่างรอบคอบ
+      </div>
+    </div>
+    
+    <button class="btn btn-submit btn-add-user" onclick="toggleAddAdminForm()">
+      ➕ เพิ่ม Admin ใหม่
+    </button>
+    
+    <div class="new-user-form" id="newAdminForm">
+      <div class="form-group">
+        <label>อีเมล Admin</label>
+        <input type="email" id="newAdminEmail" placeholder="admin@example.com" required>
+      </div>
+      <div style="background: #f0f7ff; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; color: #1565c0;">
+        💡 <strong>สิทธิ์ที่จะได้รับ:</strong> เพิ่ม/แก้ไข/ลบระบบงาน, จัดการสิทธิ์ผู้ใช้, ดูรายงาน, จัดการคำขอ, จัดการ Admin
+      </div>
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-cancel" onclick="toggleAddAdminForm()">ยกเลิก</button>
+        <button type="button" class="btn btn-submit" onclick="addNewAdmin()">เพิ่ม Admin</button>
+      </div>
+    </div>
+    
+    <div class="users-list" id="adminsList">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>กำลังโหลดรายชื่อ Admin...</p>
+      </div>
+    </div>
+    
+    <div class="modal-buttons">
+      <button type="button" class="btn btn-cancel" onclick="closeManageAdminsModal()">ปิด</button>
+    </div>
+  </div>
+</div>
+
+
+  
+<script>
+const originalWarn = console.warn;
+  console.warn = function(...args) {
+    const message = args.join(' ');
+    if (
+      message.includes('Unrecognized feature') ||
+      message.includes('sandbox attribute') ||
+      message.includes('Net state changed')
+    ) {
+      return;
+    }
+    originalWarn.apply(console, args);
+  };
+  
+  // ซ่อน Modal ทั้งหมด (ยกเว้น Login Screen)
+  document.addEventListener('DOMContentLoaded', function() {
+    const modalIds = [
+      'addModal', 
+      'manageModal', 
+      'requestModal', 
+      'reportModal', 
+      'viewReportsModal', 
+      'replyReportModal', 
+      'newLinkModal', 
+      'viewRequestsModal', 
+      'rejectRequestModal'
+    ];
+    
+    modalIds.forEach(function(id) {
+      const modal = document.getElementById(id);
+      if (modal) {
+        modal.classList.remove('show');
+      }
+    });
+  });
+  
+  let isAdmin = false;
+  let allApps = [];
+  let currentUserEmail = null;
+  let isLoggedIn = false;
+  
+  window.onload = function() {
+    checkLoginStatus();
+  };
+
+function openManualPage() {
+  console.log('🔍 กำลังดึง URL คู่มือ...');
+  
+  // แสดง Loading
+  showMessage('กำลังเปิดคู่มือ... ⏳', 'success');
+  
+  google.script.run
+    .withSuccessHandler(function(manualUrl) {
+      console.log('✅ ได้ URL:', manualUrl);
+      
+      if (manualUrl) {
+        // เปิดในแท็บใหม่
+        window.open(manualUrl, '_blank');
+      } else {
+        showMessage('⚠️ ไม่พบลิงค์คู่มือ กรุณาติดต่อ Admin', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('❌ Error:', error);
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .getManualUrl();
+}
+    
+function checkLoginStatus() {
+    // แสดง Login Screen ก่อนเสมอ
+    showLoginScreen();
+    
+    // ลองดึงจาก cache ก่อน
+    const cachedEmail = localStorage.getItem('userEmail');
+    const cacheTime = localStorage.getItem('cacheTime');
+    const now = new Date().getTime();
+    
+    // ถ้ามี cache และยังไม่หมดอายุ (5 นาที)
+    if (cachedEmail && cacheTime && (now - parseInt(cacheTime)) < 300000) {
+      console.log('✅ Using cached session');
+      currentUserEmail = cachedEmail;
+      isLoggedIn = true;
+      showMainApp();
+      loadApps();
+      return;
+    }
+    
+    // ถ้าไม่มี cache หรือหมดอายุ
+    console.log('🔄 Fetching fresh session...');
+    google.script.run
+      .withSuccessHandler(function(email) {
+        if (email && email !== 'ไม่ทราบผู้ใช้') {
+          currentUserEmail = email;
+          isLoggedIn = true;
+          
+          localStorage.setItem('userEmail', email);
+          localStorage.setItem('cacheTime', new Date().getTime().toString());
+          
+          showMainApp();
+          loadApps();
+        } else {
+          console.log('No active session - showing login');
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.log('Auto-login failed:', error);
+      })
+      .getCurrentUser();
+  }
+    
+  function handleGoogleLogin() {
+    showMessage('กำลังเข้าสู่ระบบ... ⏳', 'success');
+    
+    google.script.run
+      .withSuccessHandler(function(email) {
+        if (email && email !== 'ไม่ทราบผู้ใช้') {
+          currentUserEmail = email;
+          isLoggedIn = true;
+          
+          localStorage.setItem('userEmail', email);
+          localStorage.setItem('cacheTime', new Date().getTime().toString());
+          
+          showMainApp();
+          loadApps();
+          showMessage('เข้าสู่ระบบสำเร็จ! 🎉', 'success');
+        } else {
+          showMessage('ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่', 'error');
+        }
+      })
+      .withFailureHandler(function(error) {
+        showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+      })
+      .getCurrentUser();
+  }
+    
+function handleLogout() {
+  if (confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
+    currentUserEmail = null;
+    isLoggedIn = false;
+    
+    // ลบ cache
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('cacheTime');
+    
+    // หยุด Auto-refresh
+    stopBadgeAutoRefresh();
+
+    showLoginScreen();
+    showMessage('ออกจากระบบเรียบร้อย', 'success');
+  }
+}
+    
+  function showLoginScreen() {
+    const loginScreen = document.getElementById('loginScreen');
+    const mainApp = document.getElementById('mainApp');
+    
+    if (loginScreen) {
+      loginScreen.style.display = 'flex';
+    }
+    if (mainApp) {
+      mainApp.classList.remove('show');
+    }
+  }
+  
+  function showMainApp() {
+    const loginScreen = document.getElementById('loginScreen');
+    const mainApp = document.getElementById('mainApp');
+    
+    if (loginScreen) {
+      loginScreen.style.display = 'none';
+    }
+    if (mainApp) {
+      mainApp.classList.add('show');
+    }
+  }  
+    // แสดงปุ่มดูรายงานสำหรับ Admin
+function loadApps() {
+  const loadingText = document.getElementById('loadingText');
+  if (loadingText) {
+    loadingText.textContent = 'กำลังตรวจสอบสิทธิ์...';
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      const loadingText2 = document.getElementById('loadingText');
+      if (loadingText2) {
+        loadingText2.textContent = 'กำลังโหลดระบบงาน...';
+      }
+      
+      isAdmin = result.isAdmin;
+      currentUserEmail = result.userEmail;
+      
+      document.getElementById('userEmail').textContent = currentUserEmail;
+      
+      // ซ่อนปุ่มทั้งหมดก่อน
+      document.getElementById('userButtons').style.display = 'none';
+      document.getElementById('adminButtons').style.display = 'none';
+      
+      if (isAdmin) {
+  // ✅ ตรวจสอบว่าเป็น Super Admin หรือไม่
+  google.script.run
+    .withSuccessHandler(function(isSuperAdminUser) {
+      if (isSuperAdminUser) {
+        document.getElementById('adminBadge').innerHTML = '<span class="admin-badge" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);">👑 SUPER ADMIN</span>';
+      } else {
+        document.getElementById('adminBadge').innerHTML = '<span class="admin-badge">👤 ADMIN</span>';
+      }
+    })
+    .isSuperAdmin(currentUserEmail);
+  
+  document.getElementById('adminButtons').style.display = 'flex';
+  
+  // ✅ เริ่ม Auto-refresh สำหรับ Admin
+  startBadgeAutoRefresh();
+} else {
+        document.getElementById('adminBadge').innerHTML = '';
+        document.getElementById('userButtons').style.display = 'flex';
+      }
+      
+      displayApps(result.apps);
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .getApps();
+}
+
+// เปิด Modal ดูรายงาน
+function openViewReportsModal() {
+  document.getElementById('viewReportsModal').classList.add('show');
+  loadReports();
+}
+
+// ปิด Modal ดูรายงาน
+function closeViewReportsModal() {
+  document.getElementById('viewReportsModal').classList.remove('show');
+}
+
+// โหลดรายงาน
+function loadReports() {
+  console.log('=== Loading Reports V2 ===');
+  
+  const loadingHtml = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>กำลังโหลดรายงาน...</p>
+    </div>
+  `;
+  document.getElementById('reportsList').innerHTML = loadingHtml;
+  
+  google.script.run
+    .withSuccessHandler(function(reports) {
+      console.log('=== Reports V2 Received ===');
+      console.log('Type:', typeof reports);
+      console.log('Is Array:', Array.isArray(reports));
+      console.log('Value:', reports);
+      console.log('Length:', reports ? reports.length : 'N/A');
+      
+      if (reports === null || reports === undefined) {
+        console.error('ERROR: Still receiving null!');
+        showMessage('เกิดข้อผิดพลาด: ไม่สามารถโหลดรายงานได้', 'error');
+        document.getElementById('reportsList').innerHTML = `
+          <div class="empty-state">
+            <h3>❌ เกิดข้อผิดพลาด</h3>
+            <p>กรุณาติดต่อผู้ดูแลระบบ</p>
+          </div>
+        `;
+        return;
+      }
+      
+      displayReports(reports);
+    })
+    .withFailureHandler(function(error) {
+      console.error('=== Error V2 ===');
+      console.error('Error:', error);
+      showMessage('เกิดข้อผิดพลาด: ' + error.message, 'error');
+      document.getElementById('reportsList').innerHTML = `
+        <div class="empty-state">
+          <h3>❌ เกิดข้อผิดพลาด</h3>
+          <p>${error.message}</p>
+        </div>
+      `;
+    })
+    .getAllReportsV2(); // เปลี่ยนจาก getAllReports เป็น getAllReportsV2
+}
+
+// แสดงรายงาน
+function displayReports(reports) {
+  const container = document.getElementById('reportsList');
+  
+  console.log('=== Display Reports ===');
+  console.log('Reports:', reports);
+  
+  // ตรวจสอบว่าเป็น array และมีข้อมูล
+  if (!Array.isArray(reports)) {
+    console.error('Reports is not an array:', typeof reports);
+    container.innerHTML = `
+      <div class="empty-state">
+        <h3>⚠️ ข้อมูลไม่ถูกต้อง</h3>
+        <p>รูปแบบข้อมูลรายงานไม่ถูกต้อง</p>
+      </div>
+    `;
+    return;
+  }
+  
+  if (reports.length === 0) {
+    console.log('No reports found');
+    container.innerHTML = `
+      <div class="empty-state">
+        <h3>📋 ยังไม่มีรายงาน</h3>
+        <p>ยังไม่มีผู้ใช้รายงานปัญหาหรือข้อเสนอแนะ</p>
+      </div>
+    `;
+    return;
+  }
+  
+  console.log('Rendering ' + reports.length + ' reports');
+  
+  let html = '';
+  
+  reports.forEach(function(report, index) {
+    const statusClass = report.status === 'เสร็จสิ้น' ? 'done' : 
+                       report.status === 'กำลังแก้ไข' ? 'working' : 'pending';
+    const itemClass = report.status === 'เสร็จสิ้น' ? 'status-done' : 
+                     report.status === 'กำลังแก้ไข' ? 'status-working' : 'status-pending';
+    
+    const safeMessage = String(report.message || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const safeAdminReply = String(report.adminReply || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const safeStatus = String(report.status || 'รอดำเนินการ');
+    
+    const escapedAdminReply = safeAdminReply.replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+    const escapedStatus = safeStatus.replace(/'/g, "&#39;");
+    
+    html += `
+      <div class="report-item ${itemClass}">
+        <div class="report-header">
+          <div>
+            <span class="report-user">👤 ${report.userEmail}</span>
+            <span class="report-status ${statusClass}">${safeStatus}</span>
+          </div>
+          <span class="report-time">⏰ ${new Date(report.timestamp).toLocaleString('th-TH')}</span>
+        </div>
+        
+        <div class="report-message">${safeMessage}</div>
+        
+        ${report.adminReply ? `
+          <div class="report-reply">
+            <div class="report-reply-label">✉️ คำตอบจาก Admin (${new Date(report.replyDate).toLocaleString('th-TH')})</div>
+            <div class="report-reply-text">${safeAdminReply}</div>
+          </div>
+        ` : ''}
+        
+        <div class="report-actions">
+          <button class="btn-reply" onclick="openReplyModal(${report.rowIndex}, '${escapedStatus}', '${escapedAdminReply}')">
+            ✉️ ${report.adminReply ? 'แก้ไขคำตอบ' : 'ตอบกลับ'}
+          </button>
+          <button class="btn-delete-report" onclick="deleteReportItem(${report.rowIndex})">
+            🗑️ ลบ
+          </button>
+        </div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+  console.log('Display completed');
+}
+
+// เปิด Modal ตอบกลับ
+function openReplyModal(rowIndex, status, adminReply) {
+  console.log('openReplyModal called:', rowIndex, status, adminReply);
+  
+  document.getElementById('replyRowIndex').value = rowIndex;
+  document.getElementById('replyStatus').value = status || 'รอดำเนินการ';
+  
+  // Decode HTML entities
+  const decodedReply = adminReply
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+  
+  document.getElementById('replyMessage').value = decodedReply;
+  document.getElementById('replyReportModal').classList.add('show');
+}
+
+// ปิด Modal ตอบกลับ
+function closeReplyReportModal() {
+  document.getElementById('replyReportModal').classList.remove('show');
+  document.getElementById('replyReportForm').reset();
+}
+
+// ส่งคำตอบ
+// ส่งคำตอบ
+document.getElementById('replyReportForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const rowIndex = parseInt(document.getElementById('replyRowIndex').value);
+  const status = document.getElementById('replyStatus').value;
+  const adminReply = document.getElementById('replyMessage').value;
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showMessage('ส่งคำตอบสำเร็จ! ✅', 'success');
+        closeReplyReportModal();
+        loadReports();
+        loadPendingCounts(); // ✅ เพิ่มบรรทัดนี้
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .updateReportStatus(rowIndex, status, adminReply);
+});
+
+// ลบรายงาน
+function deleteReportItem(rowIndex) {
+  if (!confirm('ต้องการลบรายงานนี้ใช่หรือไม่?')) {
+    return;
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showMessage('ลบรายงานสำเร็จ! ✅', 'success');
+        loadReports();
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .deleteReport(rowIndex);
+}
+    
+    function displayApps(apps) {
+      const container = document.getElementById('appsContainer');
+      
+      if (!apps || apps.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <h3>😊 ยังไม่มีระบบงาน</h3>
+            <p>กรุณาติดต่อ Admin เพื่อขอสิทธิ์เข้าใช้งาน</p>
+            <button class="btn btn-submit" onclick="openRequestModal()" style="margin-top: 20px;">
+              📝 ขอสิทธิ์เข้าใช้งาน
+            </button>
+          </div>
+        `;
+        return;
+      }
+      
+let html = '<div class="apps-grid">';
+  apps.forEach(function(app, index) {
+    // สร้างป้าย Public badge
+    const publicBadge = app.isPublic ? 
+      '<span style="background:#10b981; color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:5px;">Public</span>' : '';
+
+    html += `
+      <div class="app-card" onclick="openApp('${app.url}')" style="animation-delay: ${index * 0.1}s">
+        <img src="${app.photo}" alt="${app.name}" class="app-icon" onerror="this.src='https://via.placeholder.com/80/667eea/FFFFFF?text=${app.name.charAt(0)}'">
+        <div class="app-name">
+          ${app.name}
+          ${publicBadge} </div>
+        <div class="app-owner">
+          <span>👤</span>
+          <span>${app.owner}</span>
+        </div>
+        ${isAdmin ? `
+          <div class="app-actions">
+            <button class="btn-edit" onclick="editApp(event, '${app.name}', '${app.url}', '${app.photo}', ${!!app.isPublic})" title="แก้ไข">✏️</button>
+            <button class="btn-delete" onclick="deleteApp(event, '${app.name}')" title="ลบ">🗑️</button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+    
+    function openApp(url) {
+      window.open(url, '_blank');
+    }
+    
+function openModal() {
+  document.getElementById('modalTitle').textContent = '✨ เพิ่มระบบงานใหม่';
+  document.getElementById('modalDesc').textContent = 'กรอกข้อมูลระบบงานที่ต้องการเพิ่ม';
+  document.getElementById('submitBtn').textContent = 'เพิ่มระบบงาน';
+  document.getElementById('editMode').value = 'false';
+  document.getElementById('addForm').reset();
+  document.getElementById('appPublic').checked = false; // 🔥 รีเซ็ต Checkbox
+  document.getElementById('addModal').classList.add('show');
+}
+    
+    function closeModal() {
+      document.getElementById('addModal').classList.remove('show');
+      document.getElementById('addForm').reset();
+    }
+    
+function editApp(event, name, url, photo, isPublic) {
+  event.stopPropagation();
+  document.getElementById('modalTitle').textContent = '✏️ แก้ไขระบบงาน';
+  document.getElementById('modalDesc').textContent = 'แก้ไขข้อมูลระบบงาน';
+  document.getElementById('submitBtn').textContent = 'บันทึกการแก้ไข';
+  document.getElementById('editMode').value = 'true';
+  document.getElementById('oldAppName').value = name;
+  document.getElementById('appName').value = name;
+  document.getElementById('appUrl').value = url;
+  document.getElementById('appPhoto').value = photo;
+  document.getElementById('appPublic').checked = isPublic; // 🔥 ตั้งค่า Checkbox ตามข้อมูลเดิม
+  document.getElementById('addModal').classList.add('show');
+}
+    
+document.getElementById('addForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const name = document.getElementById('appName').value;
+  const url = document.getElementById('appUrl').value;
+  const photo = document.getElementById('appPhoto').value;
+  const isPublic = document.getElementById('appPublic').checked; // 🔥 รับค่า Checkbox
+  const isEdit = document.getElementById('editMode').value === 'true';
+  const oldName = document.getElementById('oldAppName').value;
+  
+  if (isEdit) {
+    google.script.run
+      .withSuccessHandler(function(result) {
+         // ... (handler เดิม)
+         if (result.success) {
+            showMessage('แก้ไขระบบงานสำเร็จ! ✅', 'success');
+            closeModal();
+            loadApps();
+         } else {
+            showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+         }
+      })
+      .withFailureHandler(function(error) { showMessage('เกิดข้อผิดพลาด: ' + error, 'error'); })
+      .updateApp(oldName, name, url, photo, isPublic); // 🔥 ส่ง isPublic
+  } else {
+    google.script.run
+      .withSuccessHandler(function(result) {
+         // ... (handler เดิม)
+         if (result.success) {
+            showMessage('เพิ่มระบบงานสำเร็จ! 🎉', 'success');
+            closeModal();
+            loadApps();
+         } else {
+            showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+         }
+      })
+      .withFailureHandler(function(error) { showMessage('เกิดข้อผิดพลาด: ' + error, 'error'); })
+      .addApp(name, url, photo, isPublic); // 🔥 ส่ง isPublic
+  }
+});
+    
+    function deleteApp(event, name) {
+      event.stopPropagation();
+      
+      if (!confirm('ต้องการลบระบบงาน "' + name + '" ใช่หรือไม่?')) {
+        return;
+      }
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showMessage('ลบระบบงานสำเร็จ! ✅', 'success');
+            loadApps();
+          } else {
+            showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+        })
+        .deleteApp(name);
+    }
+    
+    // ========== Request Access Modal ==========
+function openRequestModal() {
+  document.getElementById('requestModal').classList.add('show');
+  loadAvailableApps();
+}
+    
+    function closeRequestModal() {
+      document.getElementById('requestModal').classList.remove('show');
+      document.getElementById('requestForm').reset();
+    }
+    
+    document.getElementById('requestForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const name = document.getElementById('requestName').value;
+      const note = document.getElementById('requestNote').value;
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showMessage('ส่งคำขอสำเร็จ! รอการอนุมัติจาก Admin ✅', 'success');
+            closeRequestModal();
+          } else {
+            showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+        })
+        .requestAccess(name, note);
+    });
+    
+    // ========== Report Modal ==========
+    function openReportModal() {
+      document.getElementById('reportModal').classList.add('show');
+    }
+    
+    function closeReportModal() {
+      document.getElementById('reportModal').classList.remove('show');
+      document.getElementById('reportForm').reset();
+    }
+    
+    document.getElementById('reportForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const message = document.getElementById('reportMessage').value;
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showMessage('ส่งรายงานสำเร็จ! ขอบคุณที่แจ้งปัญหา ✅', 'success');
+            closeReportModal();
+          } else {
+            showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+        })
+        .sendReport(message);
+    });
+    
+    // ========== Manage Permissions ==========
+    function openManageModal() {
+      document.getElementById('manageModal').classList.add('show');
+      loadUsersAndApps();
+    }
+    
+    function closeManageModal() {
+      document.getElementById('manageModal').classList.remove('show');
+      document.getElementById('newUserForm').classList.remove('show');
+    }
+    
+    function loadUsersAndApps() {
+      google.script.run
+        .withSuccessHandler(function(apps) {
+          allApps = apps;
+          loadUsers();
+        })
+        .withFailureHandler(function(error) {
+          showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+        })
+        .getAllApps();
+    }
+    
+    function loadUsers() {
+      google.script.run
+        .withSuccessHandler(function(users) {
+          displayUsers(users);
+          displayNewUserApps();
+        })
+        .withFailureHandler(function(error) {
+          showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+        })
+        .getAllUsers();
+    }
+    
+function displayUsers(users) {
+  const container = document.getElementById('usersList');
+  
+  if (!users || users.length === 0) {
+    container.innerHTML = '<div class="empty-state"><h3>ยังไม่มีผู้ใช้</h3><p>เพิ่มผู้ใช้เพื่อจัดการสิทธิ์</p></div>';
+    return;
+  }
+  
+  let html = '';
+  
+  users.forEach(function(user, index) {
+    const isPending = user.apps.length === 0;
+    
+    // ✅ แก้ไขตรงนี้ - แปลงเป็น String ก่อน
+    const noteText = user.note ? String(user.note) : '';
+    const hasRequest = noteText.includes('ขอสิทธิ์:');
+    
+    html += `
+      <div class="user-item ${isPending ? 'pending-user' : ''}">
+        <div class="user-email-display">
+          ${user.email}
+          ${isPending ? '<span class="pending-badge">⏳ รอการอนุมัติ</span>' : ''}
+          ${hasRequest ? '<span class="pending-badge" style="background: #f59e0b;">📝 มีคำขอใหม่</span>' : ''}
+        </div>
+        ${user.name ? `<div class="user-detail"><strong>ชื่อ:</strong> ${user.name}</div>` : ''}
+        ${noteText ? `<div class="user-detail" style="white-space: pre-wrap;"><strong>หมายเหตุ:</strong> ${noteText}</div>` : ''}
+        
+        <div class="checkbox-item" style="margin-top: 10px; margin-bottom: 10px;">
+          <input type="checkbox" id="sendEmail${index}" checked>
+          <label for="sendEmail${index}">📧 ส่งอีเมลแจ้งผู้ใช้</label>
+        </div>
+        
+        <div class="user-actions-btn">
+          <button class="btn-save-user" onclick="saveUserPermissions('${user.email}', ${index})">💾 อนุมัติและบันทึก</button>
+          <button class="btn-delete-user" onclick="deleteUser('${user.email}')">🗑️ ลบ</button>
+        </div>
+        <div class="apps-checkboxes" id="userApps${index}">
+    `;
+    
+    allApps.forEach(function(app) {
+      const checked = user.apps.includes(app) ? 'checked' : '';
+      html += `
+        <div class="checkbox-item">
+          <input type="checkbox" id="user${index}_${app}" value="${app}" ${checked}>
+          <label for="user${index}_${app}">${app}</label>
+        </div>
+      `;
+    });
+    
+    html += `
+        </div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+}
+    
+    function displayNewUserApps() {
+      const container = document.getElementById('newUserApps');
+      let html = '';
+      
+      allApps.forEach(function(app) {
+        html += `
+          <div class="checkbox-item">
+            <input type="checkbox" id="newUser_${app}" value="${app}">
+            <label for="newUser_${app}">${app}</label>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+    }
+    
+    function toggleNewUserForm() {
+      const form = document.getElementById('newUserForm');
+      form.classList.toggle('show');
+      if (!form.classList.contains('show')) {
+        document.getElementById('newUserEmail').value = '';
+        const checkboxes = document.querySelectorAll('#newUserApps input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = false);
+      }
+    }
+    
+    function addNewUser() {
+      const email = document.getElementById('newUserEmail').value.trim();
+      
+      if (!email) {
+        showMessage('กรุณากรอกอีเมล', 'error');
+        return;
+      }
+      
+      const selectedApps = [];
+      const checkboxes = document.querySelectorAll('#newUserApps input[type="checkbox"]:checked');
+      checkboxes.forEach(cb => selectedApps.push(cb.value));
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showMessage('เพิ่มผู้ใช้สำเร็จ! ✅', 'success');
+            toggleNewUserForm();
+            loadUsers();
+          } else {
+            showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+        })
+        .updateUserPermissions(email, selectedApps);
+    }
+    
+    function saveUserPermissions(email, index) {
+  const selectedApps = [];
+  const checkboxes = document.querySelectorAll(`#userApps${index} input[type="checkbox"]:checked`);
+  checkboxes.forEach(cb => selectedApps.push(cb.value));
+  
+  // ตรวจสอบว่าต้องการส่งอีเมลหรือไม่
+  const sendEmail = document.getElementById('sendEmail' + index).checked;
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showMessage('บันทึกสิทธิ์สำเร็จ!' + (sendEmail ? ' และส่งอีเมลแจ้งผู้ใช้แล้ว' : '') + ' ✅', 'success');
+        loadUsers();
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .updateUserPermissions(email, selectedApps, sendEmail);
+}
+    
+    function deleteUser(email) {
+      if (!confirm('ต้องการลบผู้ใช้ "' + email + '" ใช่หรือไม่?')) {
+        return;
+      }
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showMessage('ลบผู้ใช้สำเร็จ! ✅', 'success');
+            loadUsers();
+          } else {
+            showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+        })
+        .deleteUser(email);
+    }
+    
+    function showMessage(text, type) {
+      const messageDiv = document.getElementById('message');
+      messageDiv.textContent = text;
+      messageDiv.className = 'message ' + type + ' show';
+      
+      setTimeout(function() {
+        messageDiv.classList.remove('show');
+      }, 3000);
+    }
+    
+    function debugUser() {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          alert('Current User: ' + result.currentUser + '\n' +
+                'Effective User: ' + result.effectiveUser + '\n' +
+                'Final User Email: ' + result.userEmail);
+        })
+        .withFailureHandler(function(error) {
+          alert('Error: ' + error);
+        })
+        .debugUserInfo();
+    }
+
+    
+
+// เพิ่มปุ่มทดสอบชั่วคราว
+
+function getReports() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Reports");
+  if (!sheet) return null;
+
+  const data = sheet.getDataRange().getValues();
+  return data.length > 1 ? data : null;
+}
+
+// ========== New Link Modal ==========
+function openNewLinkModal() {
+  // ดึง URL เดิมมาแสดงก่อน
+  google.script.run
+    .withSuccessHandler(function(currentUrl) {
+      document.getElementById('currentLinkDisplay').textContent = currentUrl || 'ยังไม่มีลิงค์ในระบบ';
+      document.getElementById('newLinkModal').classList.add('show');
+    })
+    .getWebAppUrl();
+}
+
+function closeNewLinkModal() {
+  document.getElementById('newLinkModal').classList.remove('show');
+  document.getElementById('newLinkForm').reset();
+}
+
+document.getElementById('newLinkForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const newUrl = document.getElementById('newLinkUrl').value.trim();
+  
+  if (!newUrl) {
+    showMessage('กรุณากรอกลิงค์', 'error');
+    return;
+  }
+  
+  if (!newUrl.startsWith('http://') && !newUrl.startsWith('https://')) {
+    showMessage('ลิงค์ไม่ถูกต้อง กรุณาใส่ลิงค์ที่ขึ้นต้นด้วย http:// หรือ https://', 'error');
+    return;
+  }
+  
+  if (!confirm('ต้องการอัปเดตลิงค์และส่งอีเมลแจ้งทุกคนใช่หรือไม่?')) {
+    return;
+  }
+  
+  showMessage('กำลังอัปเดตและส่งอีเมล... ⏳', 'success');
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showMessage(`✅ อัปเดตสำเร็จ! ส่งอีเมล: ${result.successCount}/${result.totalCount} คน`, 'success');
+        closeNewLinkModal();
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .updateLinkAndNotifyUsers(newUrl);
+});
+
+
+function loadAvailableApps() {
+  const container = document.getElementById('requestAppsCheckboxes');
+  container.innerHTML = '<div class="loading"><p style="color: #666; font-size: 14px;">กำลังโหลดรายการแอป...</p></div>';
+  
+  google.script.run
+    .withSuccessHandler(function(apps) {
+      if (!apps || apps.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">✅ คุณมีสิทธิ์ใช้งานครบทุกแอปแล้ว</div>';
+        return;
+      }
+      
+      let html = '';
+      apps.forEach(function(app, index) {
+        html += `
+          <div class="checkbox-item">
+            <input type="checkbox" id="reqApp${index}" value="${app}">
+            <label for="reqApp${index}">${app}</label>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+    })
+    .withFailureHandler(function(error) {
+      container.innerHTML = '<div style="text-align: center; padding: 20px; color: #ef4444;">❌ เกิดข้อผิดพลาด</div>';
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .getAvailableAppsForUser();
+}
+
+// แก้ไข Event Listener ของ requestForm
+// ค้นหาส่วนนี้
+document.getElementById('requestForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const name = document.getElementById('requestName').value.trim();
+  const note = document.getElementById('requestNote').value.trim();
+  
+  // รวบรวมแอปที่เลือก
+  const selectedApps = [];
+  const checkboxes = document.querySelectorAll('#requestAppsCheckboxes input[type="checkbox"]:checked');
+  checkboxes.forEach(cb => selectedApps.push(cb.value));
+  
+  // ✅ เพิ่ม Console log ตรงนี้
+  console.log('=== Request Form Submit ===');
+  console.log('Name:', name);
+  console.log('Note:', note);
+  console.log('Selected Apps:', selectedApps);
+  
+  if (selectedApps.length === 0) {
+    showMessage('กรุณาเลือกแอปอย่างน้อย 1 รายการ', 'error');
+    return;
+  }
+  
+  // ✅ เพิ่ม log ก่อนเรียก Google Apps Script
+  console.log('Calling requestAccess...');
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      console.log('✅ Success:', result); // ✅ เพิ่ม log
+      if (result.success) {
+        showMessage(result.message || 'ส่งคำขอสำเร็จ! รอการอนุมัติจาก Admin ✅', 'success');
+        closeRequestModal();
+        
+        // Reload หน้าจอเพื่อให้เห็นสถานะล่าสุด
+        setTimeout(function() {
+          loadApps();
+        }, 1000);
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('❌ Failure:', error); // ✅ เพิ่ม log
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .requestAccess(name, note, selectedApps);
+});
+
+// เพิ่มใน <script> ด้านล่าง
+
+// ========== View App Requests ==========
+function openViewRequestsModal() {
+  console.log('Opening view requests modal...');
+  document.getElementById('viewRequestsModal').classList.add('show');
+  loadAppRequests();
+}
+
+function closeViewRequestsModal() {
+  document.getElementById('viewRequestsModal').classList.remove('show');
+}
+
+function loadAppRequests() {
+  console.log('=== loadAppRequests START ===');
+  
+  const loadingHtml = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>กำลังโหลดคำขอ...</p>
+    </div>
+  `;
+  document.getElementById('requestsList').innerHTML = loadingHtml;
+  
+  google.script.run
+    .withSuccessHandler(function(requests) {
+      console.log('=== SUCCESS ===');
+      console.log('Requests received:', requests);
+      displayAppRequests(requests);
+    })
+    .withFailureHandler(function(error) {
+      console.error('=== FAILURE ===');
+      console.error('Error:', error);
+      showMessage('เกิดข้อผิดพลาด: ' + error.message, 'error');
+      document.getElementById('requestsList').innerHTML = `
+        <div class="empty-state">
+          <h3>❌ เกิดข้อผิดพลาด</h3>
+          <p>${error.message || error}</p>
+        </div>
+      `;
+    })
+    .getAllAppRequests();
+}
+
+function displayAppRequests(requests) {
+  const container = document.getElementById('requestsList');
+  
+  console.log('=== Display App Requests ===');
+  console.log('Type:', typeof requests);
+  console.log('Is Array:', Array.isArray(requests));
+  console.log('Length:', requests ? requests.length : 'null');
+  
+  if (!Array.isArray(requests)) {
+    console.error('Requests is not an array:', typeof requests);
+    container.innerHTML = `
+      <div class="empty-state">
+        <h3>⚠️ ข้อมูลไม่ถูกต้อง</h3>
+        <p>รูปแบบข้อมูลคำขอไม่ถูกต้อง</p>
+      </div>
+    `;
+    return;
+  }
+  
+  if (requests.length === 0) {
+    console.log('No requests found');
+    container.innerHTML = `
+      <div class="empty-state">
+        <h3>📝 ยังไม่มีคำขอ</h3>
+        <p>ยังไม่มีผู้ใช้ขอเข้าใช้ระบบ</p>
+      </div>
+    `;
+    return;
+  }
+  
+  console.log('Rendering ' + requests.length + ' requests');
+  
+  let html = '';
+  
+  requests.forEach(function(request) {
+    const timestamp = request.timestamp || new Date();
+    const userEmail = String(request.userEmail || '');
+    const name = String(request.name || '');
+    const requestedApps = String(request.requestedApps || '');
+    const note = String(request.note || '');
+    const status = String(request.status || 'รออนุมัติ');
+    
+    const statusClass = status.includes('อนุมัติแล้ว') ? 'done' : 
+                       status.includes('ปฏิเสธ') ? 'rejected' : 'pending';
+    const itemClass = status.includes('อนุมัติแล้ว') ? 'status-done' : 
+                     status.includes('ปฏิเสธ') ? 'status-rejected' : 'status-pending';
+    
+    const safeNote = note.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const safeApps = requestedApps.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    
+    const escapedUserEmail = userEmail.replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+    const escapedApps = safeApps.replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+    
+    html += `
+      <div class="report-item ${itemClass}">
+        <div class="report-header">
+          <div>
+            <span class="report-user">👤 ${userEmail}</span>
+            <span class="report-status ${statusClass}">${status}</span>
+          </div>
+          <span class="report-time">⏰ ${new Date(timestamp).toLocaleString('th-TH')}</span>
+        </div>
+        
+        ${name ? `<div style="font-size: 14px; color: #666; margin: 8px 0;"><strong>ชื่อ:</strong> ${name}</div>` : ''}
+        
+        <div class="report-message">
+          <strong>📱 แอปที่ขอใช้งาน:</strong><br>
+          ${safeApps.split(', ').map(app => {
+            const cleanApp = app.trim();
+            return cleanApp ? `<span style="display: inline-block; background: #667eea; color: white; padding: 4px 12px; border-radius: 15px; margin: 4px 4px 4px 0; font-size: 13px;">✓ ${cleanApp}</span>` : '';
+          }).join('')}
+        </div>
+        
+        ${safeNote ? `
+          <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-top: 10px; border-left: 3px solid #667eea;">
+            <div style="font-size: 12px; color: #667eea; font-weight: 600; margin-bottom: 5px;">📝 หมายเหตุ:</div>
+            <div style="color: #333; white-space: pre-wrap;">${safeNote}</div>
+          </div>
+        ` : ''}
+        
+        ${status === 'รออนุมัติ' ? `
+          <div class="report-actions">
+            <button class="btn-reply" onclick="approveRequest(${request.rowIndex}, '${escapedUserEmail}', '${escapedApps}')">
+              ✅ อนุมัติและเพิ่มสิทธิ์
+            </button>
+            <button class="btn-delete-report" style="background: #f59e0b;" onclick="openRejectRequestModal(${request.rowIndex}, '${escapedUserEmail}')">
+              ❌ ปฏิเสธ
+            </button>
+            <button class="btn-delete-report" onclick="deleteRequestItem(${request.rowIndex})">
+              🗑️ ลบ
+            </button>
+          </div>
+        ` : `
+          <div class="report-actions">
+            <button class="btn-delete-report" onclick="deleteRequestItem(${request.rowIndex})">
+              🗑️ ลบ
+            </button>
+          </div>
+        `}
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+  console.log('Display completed');
+}
+
+function approveRequest(rowIndex, userEmail, requestedApps) {
+  if (!confirm('ต้องการอนุมัติคำขอและเพิ่มสิทธิ์ให้ผู้ใช้นี้ใช่หรือไม่?')) {
+    return;
+  }
+  
+  showMessage('กำลังอนุมัติและเพิ่มสิทธิ์... ⏳', 'success');
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showMessage('อนุมัติและเพิ่มสิทธิ์สำเร็จ! ✅', 'success');
+        loadAppRequests();
+        loadPendingCounts(); // ✅ เพิ่มบรรทัดนี้
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .approveAppRequest(rowIndex, userEmail, requestedApps);
+}
+
+function openRejectRequestModal(rowIndex, userEmail) {
+  document.getElementById('rejectRowIndex').value = rowIndex;
+  document.getElementById('rejectUserEmail').value = userEmail;
+  document.getElementById('rejectRequestModal').classList.add('show');
+}
+
+function closeRejectRequestModal() {
+  document.getElementById('rejectRequestModal').classList.remove('show');
+  document.getElementById('rejectRequestForm').reset();
+}
+
+document.getElementById('rejectRequestForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const rowIndex = parseInt(document.getElementById('rejectRowIndex').value);
+  const userEmail = document.getElementById('rejectUserEmail').value;
+  const reason = document.getElementById('rejectReason').value;
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showMessage('ปฏิเสธคำขอสำเร็จ! ✅', 'success');
+        closeRejectRequestModal();
+        loadAppRequests();
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .rejectAppRequest(rowIndex, userEmail, reason);
+});
+
+function deleteRequestItem(rowIndex) {
+  if (!confirm('ต้องการลบคำขอนี้ใช่หรือไม่?')) {
+    return;
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showMessage('ลบคำขอสำเร็จ! ✅', 'success');
+        loadAppRequests();
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .deleteAppRequest(rowIndex);
+}
+
+// ลบคำขอ
+function deleteRequestItem(rowIndex) {
+  if (!confirm('ต้องการลบคำขอนี้ใช่หรือไม่?')) {
+    return;
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showMessage('ลบคำขอสำเร็จ! ✅', 'success');
+        loadAppRequests();
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .deleteAppRequest(rowIndex);
+}
+
+function handleRequestSubmit(event) {
+  event.preventDefault();
+  
+  console.log('=== Request Form Submit ===');
+  
+  const name = document.getElementById('requestName').value.trim();
+  const note = document.getElementById('requestNote').value.trim();
+  
+  // รวบรวมแอปที่เลือก
+  const selectedApps = [];
+  const checkboxes = document.querySelectorAll('#requestAppsCheckboxes input[type="checkbox"]:checked');
+  checkboxes.forEach(cb => selectedApps.push(cb.value));
+  
+  console.log('Name:', name);
+  console.log('Note:', note);
+  console.log('Selected Apps:', selectedApps);
+  
+  if (selectedApps.length === 0) {
+    showMessage('กรุณาเลือกแอปอย่างน้อย 1 รายการ', 'error');
+    return;
+  }
+  
+  console.log('Calling requestAccess...');
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      console.log('✅ Success:', result);
+      if (result.success) {
+        showMessage(result.message || 'ส่งคำขอสำเร็จ! รอการอนุมัติจาก Admin ✅', 'success');
+        closeRequestModal();
+        setTimeout(function() {
+          loadApps();
+        }, 1000);
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('❌ Failure:', error);
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .requestAccess(name, note, selectedApps);
+}
+
+// ================================
+// 👑 จัดการ Admin
+// ================================
+
+function openManageAdminsModal() {
+  console.log('Opening manage admins modal...');
+  document.getElementById('manageAdminsModal').classList.add('show');
+  loadAdmins();
+}
+
+function closeManageAdminsModal() {
+  document.getElementById('manageAdminsModal').classList.remove('show');
+  document.getElementById('newAdminForm').classList.remove('show');
+  document.getElementById('newAdminEmail').value = '';
+}
+
+function toggleAddAdminForm() {
+  const form = document.getElementById('newAdminForm');
+  form.classList.toggle('show');
+  if (!form.classList.contains('show')) {
+    document.getElementById('newAdminEmail').value = '';
+  }
+}
+
+function loadAdmins() {
+  console.log('Loading admins...');
+  
+  const loadingHtml = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>กำลังโหลดรายชื่อ Admin...</p>
+    </div>
+  `;
+  document.getElementById('adminsList').innerHTML = loadingHtml;
+  
+  google.script.run
+    .withSuccessHandler(function(admins) {
+      console.log('Admins loaded:', admins);
+      displayAdmins(admins);
+    })
+    .withFailureHandler(function(error) {
+      console.error('Error loading admins:', error);
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+      document.getElementById('adminsList').innerHTML = `
+        <div class="empty-state">
+          <h3>❌ เกิดข้อผิดพลาด</h3>
+          <p>${error}</p>
+        </div>
+      `;
+    })
+    .getAllAdmins();
+}
+
+function displayAdmins(admins) {
+  const container = document.getElementById('adminsList');
+  
+  if (!Array.isArray(admins)) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <h3>⚠️ ข้อมูลไม่ถูกต้อง</h3>
+      </div>
+    `;
+    return;
+  }
+  
+  if (admins.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <h3>👑 ยังไม่มี Admin</h3>
+        <p>เพิ่ม Admin เพื่อจัดการระบบ</p>
+      </div>
+    `;
+    return;
+  }
+  
+  let html = '';
+  
+  admins.forEach(function(admin) {
+    // ✅ กำหนดสีตาม Role
+    const borderColor = admin.role.includes('Super Admin') ? '#dc2626' : '#f59e0b';
+    const badgeColor = admin.role.includes('Super Admin') ? 
+      'background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);' : 
+      'background: #f59e0b;';
+    
+    html += `
+      <div class="user-item" style="border-left: 4px solid ${borderColor};">
+        <div class="user-email-display">
+          ${admin.role.includes('Super Admin') ? '👑' : '👤'} ${admin.email}
+          <span style="display: inline-block; ${badgeColor} color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-left: 10px;">
+            ${admin.role}
+          </span>
+        </div>
+        
+        ${admin.addedDate !== '-' ? `
+          <div class="user-detail">
+            <strong>📅 เพิ่มเมื่อ:</strong> ${admin.addedDate}
+          </div>
+        ` : ''}
+        
+        ${admin.addedBy !== '-' ? `
+          <div class="user-detail">
+            <strong>👤 เพิ่มโดย:</strong> ${admin.addedBy}
+          </div>
+        ` : ''}
+        
+        ${admin.canDelete ? `
+          <div class="user-actions-btn">
+            <button class="btn-delete-user" onclick="removeAdminUser('${admin.email}')">
+              🗑️ ลบสิทธิ์ Admin
+            </button>
+          </div>
+        ` : `
+          <div style="color: #999; font-size: 14px; margin-top: 10px; padding: 10px; background: #f5f6f7; border-radius: 8px;">
+            ${admin.role.includes('Super Admin') ? 
+              '🔒 Super Admin ไม่สามารถถูกลบได้' : 
+              '🔒 เฉพาะ Super Admin เท่านั้นที่สามารถจัดการ Admin ได้'}
+          </div>
+        `}
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+}
+
+function addNewAdmin() {
+  const email = document.getElementById('newAdminEmail').value.trim();
+  
+  if (!email) {
+    showMessage('กรุณากรอกอีเมล', 'error');
+    return;
+  }
+  
+  if (!email.includes('@')) {
+    showMessage('รูปแบบอีเมลไม่ถูกต้อง', 'error');
+    return;
+  }
+  
+  if (!confirm(`ต้องการเพิ่ม "${email}" เป็น Admin ใช่หรือไม่?\n\nAdmin จะมีสิทธิ์เต็มในการจัดการระบบ`)) {
+    return;
+  }
+  
+  showMessage('กำลังเพิ่ม Admin... ⏳', 'success');
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showMessage('เพิ่ม Admin สำเร็จ! ✅', 'success');
+        toggleAddAdminForm();
+        loadAdmins();
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .addAdmin(email);
+}
+
+function removeAdminUser(email) {
+  if (!confirm(`⚠️ ต้องการลบสิทธิ์ Admin ของ "${email}" ใช่หรือไม่?\n\nผู้ใช้คนนี้จะไม่สามารถจัดการระบบได้อีกต่อไป`)) {
+    return;
+  }
+  
+  showMessage('กำลังลบสิทธิ์ Admin... ⏳', 'success');
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showMessage('ลบสิทธิ์ Admin สำเร็จ! ✅', 'success');
+        loadAdmins();
+      } else {
+        showMessage(result.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .removeAdmin(email);
+}
+// ================================
+// 📊 นับจำนวนคำขอและรายงานใหม่
+// ================================
+
+let refreshInterval = null;
+
+// โหลดจำนวนคำขอและรายงานใหม่
+
+// ================================
+// 📊 Badge Counter System
+// ================================
+
+// Badge Counter Helper
+const badgeCounter = {
+  update: function(badgeId, count) {
+    const badge = document.getElementById(badgeId);
+    if (!badge) return;
+
+    const safeCount = Math.max(0, parseInt(count) || 0);
+
+    if (safeCount > 99) {
+      badge.textContent = '99+';
+      badge.classList.add('large');
+    } else {
+      badge.textContent = safeCount;
+      badge.classList.remove('large');
+    }
+
+    badge.setAttribute('data-count', safeCount);
+
+    if (safeCount === 0) {
+      badge.classList.add('hidden');
+    } else {
+      badge.classList.remove('hidden');
+    }
+
+    badge.classList.add('pulse');
+    setTimeout(() => badge.classList.remove('pulse'), 300);
+  }
+};
+
+// ตัวแปร Auto-refresh (ประกาศครั้งเดียว)
+let badgeRefreshInterval = null;
+
+// โหลดจำนวนคำขอและรายงานใหม่
+function loadPendingCounts() {
+  if (!isAdmin) {
+    return;
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(counts) {
+      console.log('📊 Pending counts:', counts);
+      
+      // อัปเดต Badge คำขอ
+      const badgeRequests = document.getElementById('badgeRequests');
+      if (badgeRequests) {
+        badgeCounter.update('badgeRequests', counts.requests);
+      }
+      
+      // อัปเดต Badge รายงาน
+      const badgeReports = document.getElementById('badgeReports');
+      if (badgeReports) {
+        badgeCounter.update('badgeReports', counts.reports);
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('❌ Error loading pending counts:', error);
+    })
+    .getAllPendingCounts();
+}
+
+// เริ่ม Auto-refresh ทุก 30 วินาที
+function startBadgeAutoRefresh() {
+  if (!isAdmin || badgeRefreshInterval) {
+    return;
+  }
+  
+  // โหลดครั้งแรกทันที
+  loadPendingCounts();
+  
+  // Auto-refresh ทุก 30 วินาที
+  badgeRefreshInterval = setInterval(function() {
+    loadPendingCounts();
+  }, 30000);
+  
+  console.log('✅ Badge auto-refresh started (every 30 seconds)');
+}
+
+// หยุด Auto-refresh
+function stopBadgeAutoRefresh() {
+  if (badgeRefreshInterval) {
+    clearInterval(badgeRefreshInterval);
+    badgeRefreshInterval = null;
+    console.log('⏹️ Badge auto-refresh stopped');
+  }
+}
+
+// ฟังก์ชันอัปเดต Badge (iOS Native Style)
+function updateBadge(element, count) {
+  if (!element) return;
+  
+  // เซ็ต data-count attribute
+  element.setAttribute('data-count', count);
+  
+  if (count > 0) {
+    // แสดงตัวเลข (ถ้าเกิน 99 แสดง 99+)
+    if (count > 99) {
+      element.textContent = '99+';
+    } else {
+      element.textContent = count;
+    }
+    
+    element.classList.remove('hidden');
+  } else {
+    element.classList.add('hidden');
+  }
+}
+// เริ่ม Auto-refresh ทุก 30 วินาที
+function startAutoRefresh() {
+  if (!isAdmin || refreshInterval) {
+    return;
+  }
+  
+  // โหลดครั้งแรกทันที
+  loadPendingCounts();
+  
+  // Auto-refresh ทุก 30 วินาที
+  refreshInterval = setInterval(function() {
+    loadPendingCounts();
+  }, 30000);
+  
+  console.log('✅ Auto-refresh started (every 30 seconds)');
+}
+
+
+  </script>
+
+  
+</body>
+</html>
