@@ -1,0 +1,2604 @@
+function doGet(e) {
+  const page = e.parameter.page;
+  
+  if (page === 'manual') {
+    return HtmlService.createHtmlOutputFromFile('manual')
+      .setTitle('คู่มือศูนย์รวมระบบงาน')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  } else {
+    return HtmlService.createHtmlOutputFromFile('index')
+      .setTitle('ศูนย์รวมระบบงาน')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+}
+
+function getApps() {
+  const sheet = getOrCreateSheet();
+  const lastRow = sheet.getLastRow();
+  
+  if (lastRow <= 1) {
+    const currentUser = Session.getActiveUser().getEmail();
+    const effectiveUser = Session.getEffectiveUser().getEmail();
+    const userEmail = currentUser || effectiveUser;
+    const userIsAdmin = isAdmin(userEmail);
+    return { 
+      apps: [], 
+      isAdmin: userIsAdmin, 
+      userEmail: userEmail 
+    };
+  }
+  
+  // 🔥 แก้ไข: ดึงข้อมูล 5 คอลัมน์ (เพิ่ม IsPublic)
+  const data = sheet.getRange(1, 1, lastRow, 5).getValues(); 
+  
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  const userIsAdmin = isAdmin(userEmail);
+  const userPermissions = getUserPermissions(userEmail);
+  
+  const apps = [];
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0]) {
+      const appName = data[i][0];
+      const isPublic = data[i][4] === true; // 🔥 ตรวจสอบค่า Public (คอลัมน์ E)
+
+      // 🔥 แก้ไข: ถ้าเป็น Admin หรือ Owner หรือ มีสิทธิ์ หรือ เป็น Public
+      const hasAccess = userIsAdmin || 
+                       data[i][3] === userEmail || 
+                       userPermissions.includes(appName) ||
+                       isPublic;
+                       
+      if (hasAccess) {
+        apps.push({
+          name: appName,
+          url: data[i][1],
+          photo: data[i][2],
+          owner: data[i][3] || '',
+          isOwner: data[i][3] === userEmail,
+          isAdmin: userIsAdmin,
+          isPublic: isPublic // 🔥 ส่งค่ากลับไปหน้าบ้านด้วย
+        });
+      }
+    }
+  }
+  return { 
+    apps: apps, 
+    isAdmin: userIsAdmin,
+    userEmail: userEmail
+  };
+}
+
+function getCurrentUser() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  return currentUser || effectiveUser || 'ไม่ทราบผู้ใช้';
+}
+// ตรวจสอบว่าเป็น Super Admin หรือไม่ (เมลหลัก)
+function isSuperAdmin(email) {
+  if (!email) {
+    const currentUser = Session.getActiveUser().getEmail();
+    const effectiveUser = Session.getEffectiveUser().getEmail();
+    email = currentUser || effectiveUser;
+  }
+  
+  const superAdminEmail = 'setthawut.se11@gmail.com';
+  return email && email.toLowerCase() === superAdminEmail.toLowerCase();
+}
+
+// ตรวจสอบว่าเป็น Admin หรือไม่ (รวม Super Admin)
+function isAdmin(email) {
+  if (!email) {
+    const currentUser = Session.getActiveUser().getEmail();
+    const effectiveUser = Session.getEffectiveUser().getEmail();
+    email = currentUser || effectiveUser;
+  }
+  
+  // Super Admin เป็น Admin โดยอัตโนมัติ
+  if (isSuperAdmin(email)) {
+    return true;
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let adminSheet = ss.getSheetByName('Admins');
+  
+  if (!adminSheet) {
+    adminSheet = ss.insertSheet('Admins');
+    adminSheet.appendRow(['AdminEmail', 'AddedDate', 'AddedBy', 'Role']);
+    adminSheet.appendRow(['setthawut.se11@gmail.com', new Date(), 'System', 'Super Admin']);
+    
+    const headerRange = adminSheet.getRange('A1:D1');
+    headerRange.setBackground('#667eea');
+    headerRange.setFontColor('#FFFFFF');
+    headerRange.setFontWeight('bold');
+    headerRange.setHorizontalAlignment('center');
+    
+    adminSheet.setColumnWidth(1, 250);
+    adminSheet.setColumnWidth(2, 150);
+    adminSheet.setColumnWidth(3, 200);
+    adminSheet.setColumnWidth(4, 120);
+    
+    Logger.log('✅ สร้าง Sheet Admins สำเร็จ');
+  }
+  
+  const data = adminSheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toLowerCase() === email.toLowerCase()) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+// ฟังก์ชันเช็คสิทธิ์และบันทึกผู้ใช้ใหม่อัตโนมัติ
+function getUserPermissions(email) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let permSheet = ss.getSheetByName('Permission');
+  
+  // 1. ถ้ายังไม่มี Sheet Permission ให้สร้างใหม่
+  if (!permSheet) {
+    permSheet = ss.insertSheet('Permission');
+    // สร้าง Header: UserEmail, Apps, Name, Note
+    permSheet.appendRow(['UserEmail', 'Apps', 'Name', 'Note']);
+    return [];
+  }
+  
+  // 2. ค้นหาผู้ใช้ในระบบ
+  const data = permSheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    // เช็คว่าเจออีเมลหรือไม่ (ไม่สนใจตัวพิมพ์เล็ก-ใหญ่)
+    if (data[i][0] && data[i][0].toLowerCase() === email.toLowerCase()) {
+      // ✅ เจอ User เก่า -> คืนค่าสิทธิ์ Apps เดิมกลับไป
+      if (data[i][1]) {
+        try {
+          return JSON.parse(data[i][1]);
+        } catch (e) {
+          return [];
+        }
+      }
+      return []; // เจอ User แต่ไม่มี App อะไรเลย
+    }
+  }
+  
+  // 3. 🔥 ถ้าวนหาจนจบแล้ว "ไม่เจอ" (เป็น User ใหม่) -> บันทึกทันที
+  if (email) {
+      // Column A: Email
+      // Column B: Apps (ว่างไว้)
+      // Column C: Name (ว่างไว้ เพราะ Script ดึงชื่อไม่ได้)
+      // Column D: Note (ระบุว่าระบบบันทึกให้อัตโนมัติ)
+      permSheet.appendRow([email, '', '', 'Auto (Public Access)']);
+      
+      Logger.log('✅ Auto-saved new user: ' + email);
+  }
+  
+  // เป็น User ใหม่ ยังไม่มีสิทธิ์ App ส่วนตัว (คืนค่าว่าง)
+  return [];
+}
+
+function addApp(name, url, photo, isPublic) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์เพิ่มระบบงาน' };
+  }
+  
+  const sheet = getOrCreateSheet();
+  const owner = userEmail;
+  // 🔥 แก้ไข: บันทึกค่า isPublic ลงไปด้วย
+  sheet.appendRow([name, url, photo, owner, isPublic]);
+  
+  return { success: true };
+}
+
+// 🔥 แก้ไข: รับ parameter isPublic เพิ่ม
+function updateApp(oldName, name, url, photo, isPublic) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์แก้ไขระบบงาน' };
+  }
+  
+  const sheet = getOrCreateSheet();
+  const data = sheet.getDataRange().getValues();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === oldName) {
+      sheet.getRange(i + 1, 1).setValue(name);
+      sheet.getRange(i + 1, 2).setValue(url);
+      sheet.getRange(i + 1, 3).setValue(photo);
+      sheet.getRange(i + 1, 5).setValue(isPublic); // 🔥 อัปเดตค่า Public
+      
+      // ... (โค้ดส่วนแจ้งเตือนเดิมคงเดิม) ...
+      const users = getUsersWithAccessToApp(oldName);
+      if (oldName !== name) {
+        updateAppNameInPermissions(oldName, name);
+      }
+      if (users.length > 0) {
+        notifyAppUpdate(name, url, users);
+      }
+      
+      return { success: true };
+    }
+  }
+  return { success: false, message: 'ไม่พบระบบงาน' };
+}
+
+// ฟังก์ชันอัปเดตชื่อแอปใน Permission sheet เมื่อมีการเปลี่ยนชื่อ
+function updateAppNameInPermissions(oldName, newName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let permSheet = ss.getSheetByName('Permission');
+  
+  if (!permSheet) {
+    return;
+  }
+  
+  const data = permSheet.getDataRange().getValues();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][1]) {
+      try {
+        let apps = JSON.parse(data[i][1]);
+        const index = apps.indexOf(oldName);
+        if (index !== -1) {
+          apps[index] = newName;
+          permSheet.getRange(i + 1, 2).setValue(JSON.stringify(apps));
+        }
+      } catch (e) {
+        // ข้าม
+      }
+    }
+  }
+}
+
+function deleteApp(name) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์ลบระบบงาน' };
+  }
+  
+  const sheet = getOrCreateSheet();
+  const data = sheet.getDataRange().getValues();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === name) {
+      sheet.deleteRow(i + 1);
+      return { success: true };
+    }
+  }
+  return { success: false, message: 'ไม่พบระบบงาน' };
+}
+
+function getAllApps() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const sheet = getOrCreateSheet();
+  const data = sheet.getDataRange().getValues();
+  const apps = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0]) {
+      apps.push(data[i][0]);
+    }
+  }
+  return apps;
+}
+
+function getAllUsers() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let permSheet = ss.getSheetByName('Permission');
+  
+  if (!permSheet) {
+    permSheet = ss.insertSheet('Permission');
+    permSheet.appendRow(['UserEmail', 'Apps']);
+    return [];
+  }
+  
+  const data = permSheet.getDataRange().getValues();
+  const users = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0]) {
+      let apps = [];
+      if (data[i][1]) {
+        try {
+          apps = JSON.parse(data[i][1]);
+        } catch (e) {
+          apps = [];
+        }
+      }
+      users.push({
+        email: data[i][0],
+        apps: apps
+      });
+    }
+  }
+  return users;
+}
+
+function updateUserPermissions(email, apps, sendEmail) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let permSheet = ss.getSheetByName('Permission');
+  
+  if (!permSheet) {
+    permSheet = ss.insertSheet('Permission');
+    permSheet.appendRow(['UserEmail', 'Apps', 'Name', 'Note']);
+  }
+  
+  const data = permSheet.getDataRange().getValues();
+  let found = false;
+  let isNewUser = true;
+  let oldApps = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toLowerCase() === email.toLowerCase()) {
+      if (data[i][1]) {
+        try {
+          oldApps = JSON.parse(data[i][1]);
+          isNewUser = oldApps.length === 0;
+        } catch (e) {
+          oldApps = [];
+        }
+      }
+      
+      permSheet.getRange(i + 1, 2).setValue(JSON.stringify(apps));
+      
+      // ✅ เคลียร์หมายเหตุ "ขอสิทธิ์:" เมื่ออนุมัติ
+      const currentNote = String(permSheet.getRange(i + 1, 4).getValue() || '');
+      if (currentNote.includes('ขอสิทธิ์:')) {
+        permSheet.getRange(i + 1, 4).setValue(''); // ลบหมายเหตุ
+      }
+      
+      found = true;
+      break;
+    }
+  }
+  
+  if (!found) {
+    permSheet.appendRow([email, JSON.stringify(apps), '', '']);
+  }
+  
+  // ✅ อัปเดตสถานะใน Sheet "AppRequest" เป็น "อนุมัติแล้ว"
+  let requestSheet = ss.getSheetByName('AppRequest');
+  if (requestSheet) {
+    const reqData = requestSheet.getDataRange().getValues();
+    for (let i = 1; i < reqData.length; i++) {
+      if (reqData[i][1] && reqData[i][1].toLowerCase() === email.toLowerCase() && reqData[i][5] === 'รออนุมัติ') {
+        requestSheet.getRange(i + 1, 6).setValue('อนุมัติแล้ว (' + new Date().toLocaleDateString('th-TH') + ')');
+      }
+    }
+  }
+  
+  // ส่งอีเมลเฉพาะเมื่อ Admin เลือก
+  if (sendEmail === true) {
+    notifyPermissionChange(email, apps, isNewUser);
+  }
+  
+  return { success: true };
+}
+
+function getOrCreateSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Apps');
+  
+  if (!sheet) {
+    sheet = ss.insertSheet('Apps');
+    sheet.appendRow(['Name', 'URL_Web', 'URL_Photo', 'Owner', 'IsPublic']);
+    
+    const currentUser = Session.getActiveUser().getEmail();
+    const effectiveUser = Session.getEffectiveUser().getEmail();
+    const owner = currentUser || effectiveUser;
+    
+    sheet.appendRow(['Survey Work Requirement', 'https://example.com/survey', 'https://via.placeholder.com/80/4CAF50/FFFFFF?text=S', owner]);
+    sheet.appendRow(['Central Car Booking System', 'https://example.com/car-booking', 'https://via.placeholder.com/80/2196F3/FFFFFF?text=C', owner]);
+    sheet.appendRow(['RFI Requirement System', 'https://example.com/rfi', 'https://via.placeholder.com/80/FF9800/FFFFFF?text=R', owner]);
+    sheet.appendRow(['Oil Approval', 'https://example.com/oil-approval', 'https://via.placeholder.com/80/F44336/FFFFFF?text=O', owner]);
+  }
+  
+  return sheet;
+}
+
+function debugUserInfo() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  
+  return {
+    currentUser: currentUser || 'ไม่มีข้อมูล',
+    effectiveUser: effectiveUser || 'ไม่มีข้อมูล',
+    userEmail: currentUser || effectiveUser || 'ไม่ทราบผู้ใช้'
+  };
+}
+
+
+// เพิ่มฟังก์ชันนี้ใน MenuAPP.gs
+
+// ฟังก์ชันดึงแอปทั้งหมดที่ผู้ใช้ยังไม่มีสิทธิ์
+function getAvailableAppsForUser() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!userEmail) return [];
+  
+  const sheet = getOrCreateSheet();
+  const lastRow = sheet.getLastRow();
+  
+  if (lastRow <= 1) return [];
+  
+  // ดึง 5 คอลัมน์เพื่อเช็ค isPublic
+  const data = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
+  
+  // กรองเอาเฉพาะแอปที่ 1.มีชื่อ 2.ไม่ Public
+  const allPrivateApps = data.filter(row => row[0] && row[4] !== true).map(row => row[0]);
+  
+  const userPermissions = getUserPermissions(userEmail);
+  const availableApps = allPrivateApps.filter(app => !userPermissions.includes(app));
+  
+  return availableApps;
+}
+
+function requestAccess(name, note, selectedApps) {
+  Logger.log('=== requestAccess START ===');
+  Logger.log('Name: ' + name);
+  Logger.log('Note: ' + note);
+  Logger.log('Selected Apps: ' + JSON.stringify(selectedApps));
+  
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  Logger.log('User Email: ' + userEmail);
+  
+  if (!name || !userEmail) {
+    Logger.log('❌ Missing name or email');
+    return { success: false, message: 'กรุณากรอกชื่อ' };
+  }
+  
+  if (!selectedApps || selectedApps.length === 0) {
+    Logger.log('❌ No apps selected');
+    return { success: false, message: 'กรุณาเลือกแอปอย่างน้อย 1 รายการ' };
+  }
+  
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    Logger.log('✅ Got spreadsheet');
+    
+    // สร้าง Sheet "AppRequest" สำหรับเก็บคำขอ (ถ้ายังไม่มี)
+    let requestSheet = ss.getSheetByName('AppRequest');
+    
+    if (!requestSheet) {
+      Logger.log('Creating AppRequest sheet...');
+      requestSheet = ss.insertSheet('AppRequest');
+      requestSheet.appendRow(['Timestamp', 'UserEmail', 'Name', 'RequestedApps', 'Note', 'Status']);
+      
+      // ตั้งค่า Header
+      const headerRange = requestSheet.getRange('A1:F1');
+      headerRange.setBackground('#667eea');
+      headerRange.setFontColor('#FFFFFF');
+      headerRange.setFontWeight('bold');
+      headerRange.setHorizontalAlignment('center');
+      
+      // ตั้งค่าความกว้างคอลัมน์
+      requestSheet.setColumnWidth(1, 150);
+      requestSheet.setColumnWidth(2, 200);
+      requestSheet.setColumnWidth(3, 150);
+      requestSheet.setColumnWidth(4, 300);
+      requestSheet.setColumnWidth(5, 300);
+      requestSheet.setColumnWidth(6, 120);
+      
+      Logger.log('✅ Created AppRequest sheet');
+    } else {
+      Logger.log('✅ AppRequest sheet exists');
+    }
+    
+    // ตรวจสอบว่ามีคำขอที่รออนุมัติอยู่แล้วหรือไม่
+    const lastRow = requestSheet.getLastRow();
+    Logger.log('Last row: ' + lastRow);
+    
+    if (lastRow > 1) {
+      const data = requestSheet.getRange(1, 1, lastRow, 6).getValues();
+      let foundPendingRequest = false;
+      
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][1] === userEmail && data[i][5] === 'รออนุมัติ') {
+          Logger.log('Found existing pending request at row ' + (i + 1));
+          
+          // มีคำขอที่รออนุมัติอยู่แล้ว → เพิ่มแอปเข้าไปในคำขอเดิม
+          const existingApps = data[i][3] ? data[i][3].split(', ') : [];
+          const mergedApps = [...new Set([...existingApps, ...selectedApps])];
+          
+          Logger.log('Existing apps: ' + existingApps.join(', '));
+          Logger.log('Merged apps: ' + mergedApps.join(', '));
+          
+          // อัปเดต Timestamp ใหม่
+          requestSheet.getRange(i + 1, 1).setValue(new Date());
+          
+          // อัปเดตแอปที่ขอ
+          requestSheet.getRange(i + 1, 4).setValue(mergedApps.join(', '));
+          
+          // อัปเดตหมายเหตุ (เพิ่มเข้าไป)
+          if (note) {
+            const existingNote = data[i][4] || '';
+            const separator = existingNote ? '\n---\n' + new Date().toLocaleString('th-TH') + ':\n' : '';
+            const newNote = existingNote + separator + note;
+            requestSheet.getRange(i + 1, 5).setValue(newNote);
+          }
+          
+          foundPendingRequest = true;
+          Logger.log('✅ Updated existing request');
+          
+          // ส่งอีเมลแจ้ง Admin
+          sendRequestEmail(userEmail, name, mergedApps, note, 'เพิ่มเติม');
+          
+          return { 
+            success: true, 
+            message: 'เพิ่มคำขอสิทธิ์เรียบร้อย รอการอนุมัติจาก Admin'
+          };
+        }
+      }
+    }
+    
+    // ไม่มีคำขอที่รออนุมัติ → สร้างคำขอใหม่
+    Logger.log('Creating new request...');
+    const timestamp = new Date();
+    
+    requestSheet.appendRow([
+      timestamp,
+      userEmail,
+      name,
+      selectedApps.join(', '),
+      note || '',
+      'รออนุมัติ'
+    ]);
+    
+    Logger.log('✅ Added new request row');
+    
+    // ส่งอีเมลแจ้ง Admin
+    sendRequestEmail(userEmail, name, selectedApps, note, 'ใหม่');
+    
+    Logger.log('=== requestAccess END (SUCCESS) ===');
+    
+    return { 
+      success: true, 
+      message: 'ส่งคำขอเข้าใช้ระบบสำเร็จ รอการอนุมัติจาก Admin'
+    };
+    
+  } catch (error) {
+    Logger.log('❌ ERROR: ' + error.toString());
+    Logger.log('Stack: ' + error.stack);
+    return { 
+      success: false, 
+      message: 'เกิดข้อผิดพลาด: ' + error.toString() 
+    };
+  }
+}
+
+// ฟังก์ชันส่งอีเมลแจ้ง Admin เมื่อมีคนขอสิทธิ์
+function sendRequestEmail(userEmail, name, apps, note, type) {
+  // ✅ ดึงอีเมล Admin ทั้งหมด
+  const adminEmails = getAllAdminEmails();
+  
+  if (!adminEmails || adminEmails.length === 0) {
+    Logger.log('⚠️ ไม่พบ Admin ในระบบ');
+    return;
+  }
+  
+  // ✅ ดึงลิงก์จาก Sheet "Link"
+  const webAppUrl = getWebAppUrl();
+  
+  const subject = type === 'ใหม่' ? 
+    '🔔 มีผู้ใช้ใหม่ขอเข้าใช้ระบบ' : 
+    '🔔 ผู้ใช้ขอสิทธิ์เพิ่มเติม';
+  
+  const body = `มีคำขอ${type === 'ใหม่' ? 'เข้าใช้ระบบ' : 'สิทธิ์เพิ่มเติม'}\n\n` +
+               `อีเมล: ${userEmail}\n` +
+               `ชื่อ: ${name}\n` +
+               `แอปที่ขอ: ${apps.join(', ')}\n` +
+               `หมายเหตุ: ${note || '-'}\n\n` +
+               `🔗 เข้าจัดการสิทธิ์:\n${webAppUrl || 'กรุณาเข้าระบบเพื่อจัดการ'}\n\n` +
+               `วิธีอนุมัติสิทธิ์:\n` +
+               `1. เข้าระบบ\n` +
+               `2. คลิกปุ่ม "👥 จัดการสิทธิ์" หรือ "📝 คำขอเข้าใช้"\n` +
+               `3. อนุมัติสิทธิ์ให้ผู้ใช้`;
+  
+  // สร้าง HTML Email สวยงาม
+  const htmlBody = `
+    <div style="font-family: 'Kanit', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px 15px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">🔔 แจ้งเตือน Admin</h1>
+      </div>
+      
+      <div style="background: white; padding: 30px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <h2 style="color: #667eea; margin-top: 0;">
+          ${type === 'ใหม่' ? 'มีผู้ใช้ใหม่ขอเข้าใช้ระบบ' : 'ผู้ใช้ขอสิทธิ์เพิ่มเติม'}
+        </h2>
+        
+        <div style="background: #fff3cd; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 0; color: #856404;">
+            <strong>⚠️ ต้องการการอนุมัติ:</strong> มีคำขอ${type === 'ใหม่' ? 'เข้าใช้ระบบใหม่' : 'สิทธิ์เพิ่มเติม'}รออนุมัติ
+          </p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+          <h3 style="color: #333; margin-top: 0;">📋 รายละเอียดคำขอ:</h3>
+          <p style="color: #666; margin: 5px 0;"><strong>👤 อีเมล:</strong> ${userEmail}</p>
+          <p style="color: #666; margin: 5px 0;"><strong>📝 ชื่อ:</strong> ${name}</p>
+          <p style="color: #666; margin: 5px 0;"><strong>📱 แอปที่ขอ:</strong></p>
+          <div style="margin-top: 10px;">
+            ${apps.map(app => `
+              <span style="display: inline-block; background: #667eea; color: white; padding: 6px 14px; border-radius: 20px; margin: 4px 4px 4px 0; font-size: 14px;">
+                ✓ ${app}
+              </span>
+            `).join('')}
+          </div>
+          ${note ? `
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+              <p style="color: #666; margin: 5px 0;"><strong>💬 หมายเหตุ:</strong></p>
+              <p style="color: #666; margin: 10px 0; white-space: pre-wrap; background: white; padding: 10px; border-radius: 5px;">${note}</p>
+            </div>
+          ` : ''}
+        </div>
+        
+        ${webAppUrl ? `
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${webAppUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+              🚀 เข้าระบบเพื่ออนุมัติ
+            </a>
+          </div>
+          
+          <p style="color: #999; font-size: 14px; text-align: center; margin-top: 20px;">
+            หรือคัดลอกลิงก์นี้:<br>
+            <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 5px; color: #667eea;">${webAppUrl}</code>
+          </p>
+        ` : ''}
+        
+        <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 0; color: #1565c0; font-size: 14px;">
+            <strong>💡 วิธีอนุมัติสิทธิ์:</strong><br>
+            1️⃣ เข้าระบบ<br>
+            2️⃣ คลิกปุ่ม "👥 จัดการสิทธิ์" หรือ "📝 คำขอเข้าใช้"<br>
+            3️⃣ อนุมัติสิทธิ์ให้ผู้ใช้
+          </p>
+        </div>
+        
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+        
+        <p style="color: #666; font-size: 14px; text-align: center; margin: 0;">
+          อีเมลนี้ส่งถึง Admin ทุกคนในระบบ<br>
+          <strong>ทีมงานระบบ</strong>
+        </p>
+      </div>
+    </div>
+  `;
+  
+  // ✅ ส่งอีเมลให้ Admin ทุกคน
+  try {
+    MailApp.sendEmail({
+      to: adminEmails[0], // Admin คนแรก (Super Admin)
+      bcc: adminEmails.slice(1).join(','), // Admin ที่เหลือ (ใช้ BCC)
+      subject: subject,
+      body: body,
+      htmlBody: htmlBody,
+      name: 'ศูนย์รวมระบบงาน'
+    });
+    Logger.log('✅ ส่งอีเมลแจ้ง Admin สำเร็จ: ' + adminEmails.length + ' คน');
+  } catch (e) {
+    Logger.log('❌ ไม่สามารถส่งอีเมลได้: ' + e);
+  }
+}
+
+// แก้ไข getAllUsers ให้แสดงทั้ง Name และ Note
+function getAllUsers() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let permSheet = ss.getSheetByName('Permission');
+  
+  if (!permSheet) {
+    permSheet = ss.insertSheet('Permission');
+    permSheet.appendRow(['UserEmail', 'Apps', 'Name', 'Note']);
+    return [];
+  }
+  
+  const data = permSheet.getDataRange().getValues();
+  const users = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0]) {
+      let apps = [];
+      if (data[i][1]) {
+        try {
+          apps = JSON.parse(data[i][1]);
+        } catch (e) {
+          apps = [];
+        }
+      }
+      users.push({
+        email: data[i][0],
+        apps: apps,
+        name: data[i][2] || '',
+        note: data[i][3] || ''
+      });
+    }
+  }
+  return users;
+}
+
+// ฟังก์ชันหาผู้ใช้ที่มีสิทธิ์เข้าถึงแอป
+function getUsersWithAccessToApp(appName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let permSheet = ss.getSheetByName('Permission');
+  
+  if (!permSheet) {
+    return [];
+  }
+  
+  const data = permSheet.getDataRange().getValues();
+  const users = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][1]) {
+      try {
+        const apps = JSON.parse(data[i][1]);
+        if (apps.includes(appName)) {
+          users.push(data[i][0]);
+        }
+      } catch (e) {
+        // ข้าม
+      }
+    }
+  }
+  
+  return users;
+}
+
+// ฟังก์ชันส่งอีเมลแจ้งเตือนแอปอัปเดต
+function notifyAppUpdate(appName, url, users) {
+  if (!users || users.length === 0) {
+    return;
+  }
+  
+  // ดึง URL ของศูนย์รวมระบบงาน
+  const webAppUrl = getWebAppUrl();
+  
+  const subject = '🔔 แจ้งเตือน: ระบบงาน "' + appName + '" มีการอัปเดต';
+  const body = `เรียน ผู้ใช้งานระบบ\n\n` +
+               `ระบบงาน "${appName}" ที่คุณมีสิทธิ์เข้าถึงมีการอัปเดตข้อมูล\n\n` +
+               `URL: ${url}\n\n` +
+               `กรุณาตรวจสอบการเปลี่ยนแปลงและใช้งานได้ตามปกติ\n\n` +
+               `🔗 เข้าใช้งานศูนย์รวมระบบงาน:\n${webAppUrl || 'กรุณาติดต่อ Admin'}\n\n` +
+               `ขอบคุณครับ/ค่ะ\n` +
+               `ทีมงานระบบ`;
+  
+  // สร้าง HTML Email
+  const htmlBody = `
+    <div style="font-family: 'Kanit', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px 15px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">🔔 แจ้งเตือนระบบ</h1>
+      </div>
+      
+      <div style="background: white; padding: 30px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <h2 style="color: #667eea; margin-top: 0;">ระบบงานมีการอัปเดต</h2>
+        
+        <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 0; color: #856404;">
+            <strong>📱 ระบบงาน:</strong> ${appName}
+          </p>
+        </div>
+        
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          ระบบงาน <strong>"${appName}"</strong> ที่คุณมีสิทธิ์เข้าถึงมีการอัปเดตข้อมูล
+        </p>
+        
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin: 20px 0;">
+          <p style="color: #666; margin: 0; font-size: 14px;">
+            <strong>🔗 URL ระบบงาน:</strong><br>
+            <a href="${url}" style="color: #667eea; word-break: break-all;">${url}</a>
+          </p>
+        </div>
+        
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          กรุณาตรวจสอบการเปลี่ยนแปลงและใช้งานได้ตามปกติ
+        </p>
+        
+        ${webAppUrl ? `
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${webAppUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+              🚀 เข้าศูนย์รวมระบบงาน
+            </a>
+          </div>
+          
+          <p style="color: #999; font-size: 14px; text-align: center; margin-top: 20px;">
+            หรือคัดลอกลิงก์นี้:<br>
+            <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 5px; color: #667eea;">${webAppUrl}</code>
+          </p>
+        ` : ''}
+        
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+        
+        <p style="color: #666; font-size: 14px; text-align: center; margin: 0;">
+          ขอบคุณที่ใช้งานระบบครับ/ค่ะ<br>
+          <strong>ทีมงานระบบ</strong>
+        </p>
+      </div>
+    </div>
+  `;
+  
+  // ส่งอีเมลแบบ Batch (แบ่งกลุ่ม 100 คนต่อครั้ง)
+  const batchSize = 100;
+  let successCount = 0;
+  
+  for (let i = 0; i < users.length; i += batchSize) {
+    const batch = users.slice(i, i + batchSize);
+    
+    try {
+      MailApp.sendEmail({
+        to: batch[0],
+        bcc: batch.slice(1).join(','),
+        subject: subject,
+        body: body,
+        htmlBody: htmlBody,
+        name: 'ศูนย์รวมระบบงาน'
+      });
+      successCount += batch.length;
+      Logger.log('✅ ส่งอีเมลแจ้งแอปอัปเดต Batch ' + (Math.floor(i/batchSize) + 1) + ': ' + batch.length + ' คน');
+    } catch (e) {
+      Logger.log('❌ Batch ' + (Math.floor(i/batchSize) + 1) + ' ไม่สำเร็จ: ' + e);
+    }
+  }
+  
+  Logger.log('✅ ส่งอีเมลแจ้งเตือนแอปอัปเดตสำเร็จ: ' + successCount + '/' + users.length + ' คน');
+}
+
+// ฟังก์ชันดึง URL จาก Sheet "Link"
+function getWebAppUrl() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let linkSheet = ss.getSheetByName('Link');
+    
+    // สร้าง Sheet ถ้ายังไม่มี
+    if (!linkSheet) {
+      linkSheet = ss.insertSheet('Link');
+      linkSheet.appendRow(['ชื่อระบบ', 'URL']);
+      linkSheet.appendRow(['ศูนย์รวมระบบงาน', 'https://script.google.com/macros/s/YOUR_URL/exec']);
+      
+      // ตั้งค่าสี Header
+      const headerRange = linkSheet.getRange('A1:B1');
+      headerRange.setBackground('#667eea');
+      headerRange.setFontColor('#FFFFFF');
+      headerRange.setFontWeight('bold');
+      headerRange.setHorizontalAlignment('center');
+      
+      // ตั้งค่าความกว้างคอลัมน์
+      linkSheet.setColumnWidth(1, 200);
+      linkSheet.setColumnWidth(2, 500);
+      
+      Logger.log('✅ สร้าง Sheet "Link" แล้ว - กรุณาใส่ URL ที่ถูกต้อง');
+      return null;
+    }
+    
+    const data = linkSheet.getDataRange().getValues();
+    
+    // หา URL ที่ column A = "ศูนย์รวมระบบงาน"
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === 'ศูนย์รวมระบบงาน' && data[i][1]) {
+        Logger.log('✅ พบ URL: ' + data[i][1]);
+        return data[i][1];
+      }
+    }
+    
+    Logger.log('⚠️ ไม่พบ URL ในระบบ');
+    return null;
+    
+  } catch (e) {
+    Logger.log('❌ Error: ' + e);
+    return null;
+  }
+}
+
+// ฟังก์ชันส่งอีเมลแจ้งเตือนสิทธิ์ถูกเปลี่ยนแปลง
+function notifyPermissionChange(email, apps, isNewUser) {
+  const subject = isNewUser ? 
+    '✅ คำขอเข้าใช้ระบบได้รับการอนุมัติ' : 
+    '🔔 สิทธิ์การเข้าถึงระบบของคุณมีการเปลี่ยนแปลง';
+  
+  let appsList = '';
+  if (apps && apps.length > 0) {
+    appsList = apps.map((app, index) => `${index + 1}. ${app}`).join('\n');
+  } else {
+    appsList = 'ไม่มี (สิทธิ์ถูกยกเลิก)';
+  }
+  
+  // ดึง URL จาก Sheet "Link"
+  const webAppUrl = getWebAppUrl();
+  
+  const body = `เรียน ผู้ใช้งานระบบ\n\n` +
+               `${isNewUser ? 'คำขอเข้าใช้ระบบของคุณได้รับการอนุมัติแล้ว! 🎉' : 'สิทธิ์การเข้าถึงระบบของคุณมีการเปลี่ยนแปลง'}\n\n` +
+               `ระบบงานที่คุณสามารถเข้าถึงได้:\n${appsList}\n\n` +
+               `${apps && apps.length > 0 ? '✨ คุณสามารถเข้าใช้งานระบบได้ทันที!\n\n' : 'หากมีข้อสงสัย กรุณาติดต่อ Admin\n\n'}` +
+               `🔗 เข้าใช้งานศูนย์รวมระบบงาน:\n${webAppUrl}\n\n` +
+               `ขอบคุณที่ใช้งานระบบครับ/ค่ะ\n` +
+               `ทีมงานระบบ`;
+  
+  // สร้าง HTML Email สวยงาม
+  const htmlBody = `
+    <div style="font-family: 'Kanit', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px 15px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">🚀 ศูนย์รวมระบบงาน</h1>
+      </div>
+      
+      <div style="background: white; padding: 30px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <h2 style="color: #667eea; margin-top: 0;">
+          ${isNewUser ? '✅ คำขอเข้าใช้ระบบได้รับการอนุมัติ' : '🔔 สิทธิ์การเข้าถึงระบบมีการเปลี่ยนแปลง'}
+        </h2>
+        
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          ${isNewUser ? 'ยินดีต้อนรับ! คำขอของคุณได้รับการอนุมัติแล้ว 🎉' : 'สิทธิ์การเข้าถึงของคุณได้รับการอัปเดต'}
+        </p>
+        
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+          <h3 style="color: #667eea; margin-top: 0;">📋 ระบบงานที่คุณสามารถเข้าถึง:</h3>
+          ${apps && apps.length > 0 ? 
+            `<ul style="color: #333; line-height: 2;">${apps.map(app => `<li><strong>${app}</strong></li>`).join('')}</ul>` : 
+            '<p style="color: #999;">ไม่มี (สิทธิ์ถูกยกเลิก)</p>'
+          }
+        </div>
+        
+        ${apps && apps.length > 0 ? `
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${webAppUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+              🔗 เข้าใช้งานระบบ
+            </a>
+          </div>
+          
+          <p style="color: #999; font-size: 14px; text-align: center; margin-top: 20px;">
+            หรือคัดลอกลิงก์นี้:<br>
+            <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 5px; color: #667eea;">${webAppUrl}</code>
+          </p>
+        ` : ''}
+        
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+        
+        <p style="color: #666; font-size: 14px; text-align: center; margin: 0;">
+          ขอบคุณที่ใช้งานระบบครับ/ค่ะ<br>
+          <strong>ทีมงานระบบ</strong>
+        </p>
+      </div>
+    </div>
+  `;
+  
+  try {
+    MailApp.sendEmail({
+      to: email,
+      subject: subject,
+      body: body,
+      htmlBody: htmlBody
+    });
+    Logger.log('✅ ส่งอีเมลแจ้งเตือนให้: ' + email);
+  } catch (e) {
+    Logger.log('❌ ไม่สามารถส่งอีเมลได้: ' + e);
+  }
+}
+
+function addApp(name, url, photo) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์เพิ่มระบบงาน' };
+  }
+  
+  const sheet = getOrCreateSheet();
+  const owner = userEmail;
+  sheet.appendRow([name, url, photo, owner]);
+  
+  // ส่งอีเมลแจ้ง Admin เองว่าเพิ่มแอปสำเร็จ (Optional)
+  try {
+    const subject = '✅ เพิ่มระบบงานใหม่สำเร็จ';
+    const body = `คุณได้เพิ่มระบบงานใหม่เรียบร้อยแล้ว\n\n` +
+                 `ชื่อระบบ: ${name}\n` +
+                 `URL: ${url}\n\n` +
+                 `อย่าลืมไปจัดการสิทธิ์ให้กับผู้ใช้ที่ต้องการเข้าถึงระบบนี้`;
+    MailApp.sendEmail(userEmail, subject, body);
+  } catch (e) {
+    Logger.log('ไม่สามารถส่งอีเมลได้: ' + e);
+  }
+  
+  return { success: true };
+}
+
+// ฟังก์ชันสร้าง Sheet Report (กดรันใน Apps Script Editor)
+function createReportSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let reportSheet = ss.getSheetByName('Report');
+  
+  if (reportSheet) {
+    Logger.log('Sheet Report มีอยู่แล้ว');
+    return;
+  }
+  
+  // สร้าง Sheet ใหม่
+  reportSheet = ss.insertSheet('Report');
+  
+  // สร้าง Header
+  reportSheet.appendRow([
+    'Timestamp',
+    'UserEmail', 
+    'Message', 
+    'Status',
+    'AdminReply',
+    'ReplyDate'
+  ]);
+  
+  // ตั้งค่าความกว้างคอลัมน์
+  reportSheet.setColumnWidth(1, 150); // Timestamp
+  reportSheet.setColumnWidth(2, 200); // UserEmail
+  reportSheet.setColumnWidth(3, 400); // Message
+  reportSheet.setColumnWidth(4, 120); // Status
+  reportSheet.setColumnWidth(5, 400); // AdminReply
+  reportSheet.setColumnWidth(6, 150); // ReplyDate
+  
+  // ตั้งค่าสี Header
+  const headerRange = reportSheet.getRange('A1:F1');
+  headerRange.setBackground('#667eea');
+  headerRange.setFontColor('#FFFFFF');
+  headerRange.setFontWeight('bold');
+  headerRange.setHorizontalAlignment('center');
+  
+  Logger.log('✅ สร้าง Sheet Report สำเร็จ!');
+}
+
+// ฟังก์ชันสำหรับรายงานปัญหา - ส่งให้ Admin ทุกคน
+function sendReport(message) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!message) {
+    return { success: false, message: 'กรุณากรอกข้อความ' };
+  }
+  
+  // บันทึกลง Sheet
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let reportSheet = ss.getSheetByName('Report');
+  
+  if (!reportSheet) {
+    createReportSheet();
+    reportSheet = ss.getSheetByName('Report');
+  }
+  
+  const timestamp = new Date();
+  reportSheet.appendRow([
+    timestamp,
+    userEmail,
+    message,
+    'รอดำเนินการ',
+    '',
+    ''
+  ]);
+  
+  // ✅ ดึงอีเมล Admin ทั้งหมด
+  const adminEmails = getAllAdminEmails();
+  
+  if (!adminEmails || adminEmails.length === 0) {
+    Logger.log('⚠️ ไม่พบ Admin ในระบบ');
+    return { success: true, message: 'บันทึกรายงานสำเร็จ แต่ไม่มี Admin ในระบบ' };
+  }
+  
+  // ✅ ดึงลิงก์จาก Sheet "Link"
+  const webAppUrl = getWebAppUrl();
+  
+  const subject = '📢 รายงานปัญหา/ข้อเสนอแนะระบบงาน';
+  const body = `มีรายงานปัญหาจากผู้ใช้\n\n` +
+               `จาก: ${userEmail}\n` +
+               `ข้อความ:\n${message}\n\n` +
+               `เวลา: ${timestamp.toLocaleString('th-TH')}\n\n` +
+               `🔗 เข้าระบบเพื่อตอบกลับ:\n${webAppUrl || 'กรุณาเข้าระบบเพื่อตอบกลับ'}\n\n` +
+               `วิธีตอบกลับ:\n` +
+               `1. เข้าระบบ\n` +
+               `2. คลิกปุ่ม "📋 ดูรายงาน"\n` +
+               `3. ตอบกลับผู้ใช้`;
+  
+  // สร้าง HTML Email สวยงาม
+  const htmlBody = `
+    <div style="font-family: 'Kanit', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+      <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; border-radius: 15px 15px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">📢 รายงานปัญหา</h1>
+      </div>
+      
+      <div style="background: white; padding: 30px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <h2 style="color: #f59e0b; margin-top: 0;">มีรายงานปัญหาใหม่จากผู้ใช้</h2>
+        
+        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 0; color: #92400e;">
+            <strong>⚠️ ต้องการการดำเนินการ:</strong> มีรายงานปัญหาหรือข้อเสนอแนะใหม่
+          </p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+          <h3 style="color: #333; margin-top: 0;">📋 รายละเอียด:</h3>
+          <p style="color: #666; margin: 5px 0;"><strong>👤 จาก:</strong> ${userEmail}</p>
+          <p style="color: #666; margin: 5px 0;"><strong>⏰ เวลา:</strong> ${timestamp.toLocaleString('th-TH')}</p>
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+            <p style="color: #666; margin: 5px 0 10px 0;"><strong>💬 ข้อความ:</strong></p>
+            <div style="background: white; padding: 15px; border-radius: 8px; border-left: 3px solid #f59e0b;">
+              <p style="color: #333; margin: 0; white-space: pre-wrap; line-height: 1.6;">${message}</p>
+            </div>
+          </div>
+        </div>
+        
+        ${webAppUrl ? `
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${webAppUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+              🚀 เข้าระบบเพื่อตอบกลับ
+            </a>
+          </div>
+          
+          <p style="color: #999; font-size: 14px; text-align: center; margin-top: 20px;">
+            หรือคัดลอกลิงก์นี้:<br>
+            <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 5px; color: #667eea;">${webAppUrl}</code>
+          </p>
+        ` : ''}
+        
+        <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 0; color: #1565c0; font-size: 14px;">
+            <strong>💡 วิธีตอบกลับ:</strong><br>
+            1️⃣ เข้าระบบ<br>
+            2️⃣ คลิกปุ่ม "📋 ดูรายงาน"<br>
+            3️⃣ ตอบกลับและอัปเดตสถานะ
+          </p>
+        </div>
+        
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+        
+        <p style="color: #666; font-size: 14px; text-align: center; margin: 0;">
+          อีเมลนี้ส่งถึง Admin ทุกคนในระบบ<br>
+          <strong>ทีมงานระบบ</strong>
+        </p>
+      </div>
+    </div>
+  `;
+  
+  // ✅ ส่งอีเมลให้ Admin ทุกคน
+  try {
+    MailApp.sendEmail({
+      to: adminEmails[0], // Admin คนแรก (Super Admin)
+      bcc: adminEmails.slice(1).join(','), // Admin ที่เหลือ (ใช้ BCC)
+      subject: subject,
+      body: body,
+      htmlBody: htmlBody,
+      name: 'ศูนย์รวมระบบงาน'
+    });
+    Logger.log('✅ ส่งอีเมลแจ้ง Admin สำเร็จ: ' + adminEmails.length + ' คน');
+    return { success: true };
+  } catch (e) {
+    Logger.log('❌ ไม่สามารถส่งอีเมลได้: ' + e);
+    return { success: true, message: 'บันทึกสำเร็จ แต่ไม่สามารถส่งอีเมลได้: ' + e };
+  }
+}
+
+
+// ฟังก์ชันดึงรายงานทั้งหมด (สำหรับ Admin)
+function getAllReports() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let reportSheet = ss.getSheetByName('Report');
+  
+  if (!reportSheet) {
+    return [];
+  }
+  
+  const data = reportSheet.getDataRange().getValues();
+  const reports = [];
+  
+  for (let i = data.length - 1; i >= 1; i--) { // เรียงจากใหม่ไปเก่า
+    if (data[i][0]) {
+      reports.push({
+        rowIndex: i + 1,
+        timestamp: data[i][0],
+        userEmail: data[i][1],
+        message: data[i][2],
+        status: data[i][3] || 'รอดำเนินการ',
+        adminReply: data[i][4] || '',
+        replyDate: data[i][5] || ''
+      });
+    }
+  }
+  
+  return reports;
+}
+
+// ฟังก์ชันอัปเดตสถานะและตอบกลับ
+function updateReportStatus(rowIndex, status, adminReply) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let reportSheet = ss.getSheetByName('Report');
+  
+  if (!reportSheet) {
+    return { success: false, message: 'ไม่พบข้อมูล' };
+  }
+  
+  const replyDate = new Date();
+  
+  // อัปเดตข้อมูล
+  reportSheet.getRange(rowIndex, 4).setValue(status); // Status
+  reportSheet.getRange(rowIndex, 5).setValue(adminReply); // AdminReply
+  reportSheet.getRange(rowIndex, 6).setValue(replyDate); // ReplyDate
+  
+  // ส่งอีเมลแจ้งผู้รายงาน
+  const reporterEmail = reportSheet.getRange(rowIndex, 2).getValue();
+  const originalMessage = reportSheet.getRange(rowIndex, 3).getValue();
+  
+  const subject = '✅ ตอบกลับ: รายงานปัญหาของคุณ';
+  const body = `เรียน ผู้ใช้งานระบบ\n\n` +
+               `ขอบคุณที่รายงานปัญหาให้เรา\n\n` +
+               `ข้อความของคุณ:\n"${originalMessage}"\n\n` +
+               `สถานะ: ${status}\n\n` +
+               `คำตอบจาก Admin:\n${adminReply}\n\n` +
+               `วันที่ตอบกลับ: ${replyDate.toLocaleString('th-TH')}\n\n` +
+               `ขอบคุณที่ใช้งานระบบครับ/ค่ะ`;
+  
+  try {
+    MailApp.sendEmail(reporterEmail, subject, body);
+  } catch (e) {
+    Logger.log('ไม่สามารถส่งอีเมลได้: ' + e);
+  }
+  
+  return { success: true };
+}
+
+// ฟังก์ชันลบรายงาน
+function deleteReport(rowIndex) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let reportSheet = ss.getSheetByName('Report');
+  
+  if (!reportSheet) {
+    return { success: false, message: 'ไม่พบข้อมูล' };
+  }
+  
+  reportSheet.deleteRow(rowIndex);
+  return { success: true };
+}
+
+
+function debugUserInfo() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  
+  return {
+    currentUser: currentUser || 'ไม่มีข้อมูล',
+    effectiveUser: effectiveUser || 'ไม่มีข้อมูล',
+    userEmail: currentUser || effectiveUser || 'ไม่ทราบผู้ใช้'
+  };
+}
+
+
+function loadReports() {
+  console.log('Loading reports...');
+  google.script.run
+    .withSuccessHandler(function(reports) {
+      console.log('Reports received:', reports);
+      displayReports(reports);
+    })
+    .withFailureHandler(function(error) {
+      console.error('Error loading reports:', error);
+      showMessage('เกิดข้อผิดพลาด: ' + error, 'error');
+    })
+    .getAllReports();
+}
+
+
+function getAllReports() {
+  // Default return array เพื่อป้องกัน null
+  let reports = [];
+  
+  try {
+    const currentUser = Session.getActiveUser().getEmail();
+    const effectiveUser = Session.getEffectiveUser().getEmail();
+    const userEmail = currentUser || effectiveUser;
+    
+    Logger.log('=== getAllReports Start ===');
+    Logger.log('User: ' + userEmail);
+    Logger.log('Is Admin: ' + isAdmin(userEmail));
+    
+    // ต้องเป็น admin
+    if (!isAdmin(userEmail)) {
+      Logger.log('Not admin - returning empty array');
+      return [];
+    }
+    
+    // เปิด Spreadsheet
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let reportSheet = ss.getSheetByName('Report');
+    
+    Logger.log('Sheet exists: ' + (reportSheet !== null));
+    
+    // สร้าง Sheet ถ้ายังไม่มี
+    if (!reportSheet) {
+      Logger.log('Creating Report sheet...');
+      createReportSheet();
+      reportSheet = ss.getSheetByName('Report');
+      
+      if (!reportSheet) {
+        Logger.log('ERROR: Cannot find/create Report sheet');
+        return [];
+      }
+    }
+    
+    // ดึงข้อมูล
+    const lastRow = reportSheet.getLastRow();
+    Logger.log('Last Row: ' + lastRow);
+    
+    if (lastRow <= 1) {
+      Logger.log('No data rows');
+      return [];
+    }
+    
+    const data = reportSheet.getRange(1, 1, lastRow, 6).getValues();
+    Logger.log('Fetched ' + data.length + ' rows');
+    
+    // แปลงเป็น array of objects
+    for (let i = data.length - 1; i >= 1; i--) {
+      if (data[i][0]) {
+        const report = {
+          rowIndex: i + 1,
+          timestamp: data[i][0],
+          userEmail: String(data[i][1] || ''),
+          message: String(data[i][2] || ''),
+          status: String(data[i][3] || 'รอดำเนินการ'),
+          adminReply: String(data[i][4] || ''),
+          replyDate: data[i][5] || ''
+        };
+        reports.push(report);
+      }
+    }
+    
+    Logger.log('Returning ' + reports.length + ' reports');
+    Logger.log('Reports array: ' + JSON.stringify(reports));
+    
+  } catch (error) {
+    Logger.log('ERROR: ' + error.toString());
+    Logger.log('Stack: ' + error.stack);
+  }
+  
+  // ALWAYS return array - never null
+  return reports;
+}
+
+
+
+
+function testAdminStatus() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  const adminStatus = isAdmin(userEmail);
+  
+  Logger.log('=== Admin Status Test ===');
+  Logger.log('Current User: ' + currentUser);
+  Logger.log('Effective User: ' + effectiveUser);
+  Logger.log('Final Email: ' + userEmail);
+  Logger.log('Is Admin: ' + adminStatus);
+  Logger.log('Admin Email Config: setthawut.se11@gmail.com');
+  
+  return {
+    userEmail: userEmail,
+    isAdmin: adminStatus
+  };
+}
+function getVersion() {
+  return {
+    version: "2.0",
+    timestamp: new Date().toISOString()
+  };
+}
+
+// ฟังก์ชันใหม่ - ชื่อต่างจากเดิม
+function getAllReportsV2() {
+  let reports = [];
+  
+  try {
+    const currentUser = Session.getActiveUser().getEmail();
+    const effectiveUser = Session.getEffectiveUser().getEmail();
+    const userEmail = currentUser || effectiveUser;
+    
+    if (!isAdmin(userEmail)) {
+      return [];
+    }
+    
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let reportSheet = ss.getSheetByName('Report');
+    
+    if (!reportSheet) {
+      createReportSheet();
+      reportSheet = ss.getSheetByName('Report');
+    }
+    
+    if (!reportSheet) {
+      return [];
+    }
+    
+    const lastRow = reportSheet.getLastRow();
+    
+    if (lastRow <= 1) {
+      return [];
+    }
+    
+    const data = reportSheet.getRange(1, 1, lastRow, 6).getValues();
+    
+    for (let i = data.length - 1; i >= 1; i--) {
+      if (data[i][0]) {
+        // แปลง Date เป็น ISO String หรือ empty string
+        const timestamp = data[i][0] instanceof Date ? data[i][0].toISOString() : String(data[i][0] || '');
+        const replyDate = data[i][5] instanceof Date ? data[i][5].toISOString() : String(data[i][5] || '');
+        
+        reports.push({
+          rowIndex: i + 1,
+          timestamp: timestamp,
+          userEmail: String(data[i][1] || ''),
+          message: String(data[i][2] || ''),
+          status: String(data[i][3] || 'รอดำเนินการ'),
+          adminReply: String(data[i][4] || ''),
+          replyDate: replyDate
+        });
+      }
+    }
+    
+    Logger.log('V2 Returning: ' + reports.length + ' reports');
+    
+  } catch (error) {
+    Logger.log('V2 ERROR: ' + error);
+  }
+  
+  return reports;
+}
+
+
+function testGetAllReportsV2() {
+  Logger.clear();
+  Logger.log('========== TEST START ==========');
+  
+  const result = getAllReportsV2();
+  
+  Logger.log('Result Type: ' + typeof result);
+  Logger.log('Is Array: ' + Array.isArray(result));
+  Logger.log('Is Null: ' + (result === null));
+  Logger.log('Is Undefined: ' + (result === undefined));
+  Logger.log('Result: ' + JSON.stringify(result));
+  Logger.log('========== TEST END ==========');
+  
+  return result;
+}
+
+function testReports() {
+     const result = getAllReportsV2();
+     Logger.log('Type: ' + typeof result);
+     Logger.log('Is Array: ' + Array.isArray(result));
+     Logger.log('Value: ' + JSON.stringify(result));
+     Logger.log('Length: ' + (result ? result.length : 'null'));
+   }
+
+// ฟังก์ชันส่งอีเมลอัปเดตลิงค์ใหม่ให้ทุกคน (จาก Google Sheets Menu)
+function updateAndNotifyNewLink() {
+  const ui = SpreadsheetApp.getUi();
+  
+  // แสดง Popup ให้กรอกลิงค์ใหม่
+  const response = ui.prompt(
+    '🔗 อัปเดตลิงค์ศูนย์รวมระบบงาน',
+    'กรุณากรอกลิงค์ใหม่ของศูนย์รวมระบบงาน:',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  // ตรวจสอบว่ากด OK หรือไม่
+  if (response.getSelectedButton() !== ui.Button.OK) {
+    ui.alert('❌ ยกเลิกการอัปเดต');
+    return;
+  }
+  
+  const newUrl = response.getResponseText().trim();
+  
+  // ตรวจสอบว่ากรอกลิงค์หรือไม่
+  if (!newUrl) {
+    ui.alert('⚠️ กรุณากรอกลิงค์');
+    return;
+  }
+  
+  // ตรวจสอบว่าเป็น URL ที่ถูกต้องหรือไม่
+  if (!newUrl.startsWith('http://') && !newUrl.startsWith('https://')) {
+    ui.alert('⚠️ ลิงค์ไม่ถูกต้อง กรุณาใส่ลิงค์ที่ขึ้นต้นด้วย http:// หรือ https://');
+    return;
+  }
+  
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // 1. อัปเดต URL ใน Sheet "Link"
+    let linkSheet = ss.getSheetByName('Link');
+    
+    if (!linkSheet) {
+      linkSheet = ss.insertSheet('Link');
+      linkSheet.appendRow(['ชื่อระบบ', 'URL']);
+      linkSheet.appendRow(['ศูนย์รวมระบบงาน', newUrl]);
+      Logger.log('✅ สร้าง Sheet "Link" ใหม่');
+    } else {
+      const data = linkSheet.getDataRange().getValues();
+      let updated = false;
+      
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === 'ศูนย์รวมระบบงาน') {
+          linkSheet.getRange(i + 1, 2).setValue(newUrl);
+          updated = true;
+          Logger.log('✅ อัปเดต URL ใน Sheet "Link"');
+          break;
+        }
+      }
+      
+      if (!updated) {
+        linkSheet.appendRow(['ศูนย์รวมระบบงาน', newUrl]);
+        Logger.log('✅ เพิ่ม URL ใหม่ใน Sheet "Link"');
+      }
+    }
+    
+    // 2. ดึงอีเมลทุกคนจาก Sheet "Permission" Column A
+    let permSheet = ss.getSheetByName('Permission');
+    
+    if (!permSheet) {
+      ui.alert('⚠️ ไม่พบ Sheet "Permission"');
+      return;
+    }
+    
+    const permData = permSheet.getDataRange().getValues();
+    const emailList = [];
+    
+    for (let i = 1; i < permData.length; i++) {
+      if (permData[i][0] && permData[i][0].toString().includes('@')) {
+        emailList.push(permData[i][0]);
+      }
+    }
+    
+    if (emailList.length === 0) {
+      ui.alert('⚠️ ไม่พบผู้ใช้ในระบบ');
+      return;
+    }
+    
+    Logger.log('📧 พบผู้ใช้ทั้งหมด: ' + emailList.length + ' คน');
+    
+    // 3. ส่งอีเมลแจ้งทุกคน
+    const subject = '🔔 แจ้งเตือน: ลิงค์เข้าศูนย์รวมระบบงานเปลี่ยนแปลง';
+    const body = `เรียน ผู้ใช้งานระบบ\n\n` +
+                 `ระบบศูนย์รวมระบบงานได้มีการเปลี่ยนแปลงลิงค์เข้าใช้งานใหม่\n\n` +
+                 `🔗 ลิงค์เข้าใช้งานใหม่:\n${newUrl}\n\n` +
+                 `กรุณาบุ๊คมาร์คหรือบันทึกลิงค์ใหม่นี้เพื่อความสะดวกในการเข้าใช้งาน\n\n` +
+                 `หากมีปัญหาหรือข้อสงสัย กรุณาติดต่อ Admin\n\n` +
+                 `ขอบคุณที่ใช้งานระบบครับ/ค่ะ\n` +
+                 `ทีมงานระบบ`;
+    
+    // สร้าง HTML Email สวยงาม
+    const htmlBody = `
+      <div style="font-family: 'Kanit', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px 15px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">🔔 แจ้งเตือนสำคัญ</h1>
+        </div>
+        
+        <div style="background: white; padding: 30px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+          <h2 style="color: #667eea; margin-top: 0;">ลิงค์เข้าศูนย์รวมระบบงานเปลี่ยนแปลง</h2>
+          
+          <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0; color: #856404;">
+              <strong>⚠️ สำคัญ:</strong> ระบบได้มีการเปลี่ยนแปลงลิงค์เข้าใช้งานใหม่
+            </p>
+          </div>
+          
+          <p style="color: #333; font-size: 16px; line-height: 1.6;">
+            ลิงค์เข้าใช้งานศูนย์รวมระบบงานได้ถูกอัปเดตเป็นลิงค์ใหม่แล้ว กรุณาบุ๊คมาร์คหรือบันทึกลิงค์ใหม่นี้เพื่อความสะดวกในการเข้าใช้งาน
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${newUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+              🚀 เข้าสู่ระบบ (ลิงค์ใหม่)
+            </a>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+            <p style="color: #666; margin: 0; font-size: 14px; text-align: center;">
+              <strong>🔗 ลิงค์ใหม่:</strong><br>
+              <code style="background: white; padding: 10px 15px; border-radius: 5px; color: #667eea; display: inline-block; margin-top: 10px; word-break: break-all;">${newUrl}</code>
+            </p>
+          </div>
+          
+          <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0; color: #1565c0; font-size: 14px;">
+              <strong>💡 เคล็ดลับ:</strong> กด Ctrl+D (Windows) หรือ Cmd+D (Mac) เพื่อบุ๊คมาร์คหน้านี้
+            </p>
+          </div>
+          
+          <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+          
+          <p style="color: #666; font-size: 14px; text-align: center; margin: 0;">
+            หากมีปัญหาหรือข้อสงสัย กรุณาติดต่อ Admin<br><br>
+            ขอบคุณที่ใช้งานระบบครับ/ค่ะ<br>
+            <strong>ทีมงานระบบ</strong>
+          </p>
+        </div>
+      </div>
+    `;
+    
+    // ส่งอีเมลแบบ Batch (แบ่งกลุ่ม 100 คนต่อครั้ง)
+    const batchSize = 100;
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (let i = 0; i < emailList.length; i += batchSize) {
+      const batch = emailList.slice(i, i + batchSize);
+      
+      try {
+        MailApp.sendEmail({
+          to: batch[0],
+          bcc: batch.slice(1).join(','),
+          subject: subject,
+          body: body,
+          htmlBody: htmlBody,
+          name: 'ศูนย์รวมระบบงาน'
+        });
+        successCount += batch.length;
+        Logger.log('✅ ส่งอีเมล Batch ' + (Math.floor(i/batchSize) + 1) + ': ' + batch.length + ' คน');
+      } catch (e) {
+        failCount += batch.length;
+        Logger.log('❌ Batch ' + (Math.floor(i/batchSize) + 1) + ' ไม่สำเร็จ: ' + e);
+      }
+    }
+    
+    // แสดงผลลัพธ์
+    ui.alert(
+      '✅ อัปเดตลิงค์สำเร็จ!',
+      `ลิงค์ใหม่: ${newUrl}\n\n` +
+      `📧 ส่งอีเมลแจ้งเตือน:\n` +
+      `- สำเร็จ: ${successCount} คน\n` +
+      `- ไม่สำเร็จ: ${failCount} คน\n` +
+      `- รวมทั้งหมด: ${emailList.length} คน`,
+      ui.ButtonSet.OK
+    );
+    
+    Logger.log('=== สรุปผล ===');
+    Logger.log('✅ อัปเดต URL ใน Sheet "Link" สำเร็จ');
+    Logger.log('📧 ส่งอีเมลสำเร็จ: ' + successCount + ' คน');
+    Logger.log('❌ ส่งอีเมลไม่สำเร็จ: ' + failCount + ' คน');
+    
+  } catch (error) {
+    Logger.log('❌ เกิดข้อผิดพลาด: ' + error);
+    ui.alert('❌ เกิดข้อผิดพลาด: ' + error);
+  }
+}
+
+
+// ฟังก์ชันแสดงรายชื่อผู้ใช้ทั้งหมด
+function showAllUsers() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let permSheet = ss.getSheetByName('Permission');
+  
+  if (!permSheet) {
+    SpreadsheetApp.getUi().alert('⚠️ ไม่พบ Sheet "Permission"');
+    return;
+  }
+  
+  const data = permSheet.getDataRange().getValues();
+  let userList = '📋 รายชื่อผู้ใช้ทั้งหมดในระบบ:\n\n';
+  let count = 0;
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().includes('@')) {
+      count++;
+      const name = data[i][2] || '-';
+      const appsCount = data[i][1] ? JSON.parse(data[i][1]).length : 0;
+      userList += `${count}. ${data[i][0]}\n   ชื่อ: ${name}\n   จำนวนสิทธิ์: ${appsCount} ระบบ\n\n`;
+    }
+  }
+  
+  userList += `รวมทั้งหมด: ${count} คน`;
+  
+  SpreadsheetApp.getUi().alert(userList);
+}
+
+// ฟังก์ชันแสดงสถิติ
+function showStatistics() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // นับจำนวนแอป
+  let appsSheet = ss.getSheetByName('Apps');
+  const appsCount = appsSheet ? appsSheet.getLastRow() - 1 : 0;
+  
+  // นับจำนวนผู้ใช้
+  let permSheet = ss.getSheetByName('Permission');
+  const usersCount = permSheet ? permSheet.getLastRow() - 1 : 0;
+  
+  // นับจำนวนรายงาน
+  let reportSheet = ss.getSheetByName('Report');
+  const reportsCount = reportSheet ? reportSheet.getLastRow() - 1 : 0;
+  
+  const stats = `📊 สถิติการใช้งานระบบ\n\n` +
+                `📱 จำนวนระบบงาน: ${appsCount} ระบบ\n` +
+                `👥 จำนวนผู้ใช้: ${usersCount} คน\n` +
+                `📢 จำนวนรายงาน: ${reportsCount} รายการ\n\n` +
+                `วันที่: ${new Date().toLocaleDateString('th-TH')}`;
+  
+  SpreadsheetApp.getUi().alert(stats);
+}
+
+// ฟังก์ชันสำหรับ Web App - อัปเดตลิงค์และส่งอีเมล
+function updateLinkAndNotifyUsers(newUrl) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  if (!newUrl) {
+    return { success: false, message: 'กรุณากรอกลิงค์' };
+  }
+  
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // 1. อัปเดต URL ใน Sheet "Link"
+    let linkSheet = ss.getSheetByName('Link');
+    
+    if (!linkSheet) {
+      linkSheet = ss.insertSheet('Link');
+      linkSheet.appendRow(['ชื่อระบบ', 'URL']);
+      linkSheet.appendRow(['ศูนย์รวมระบบงาน', newUrl]);
+    } else {
+      const data = linkSheet.getDataRange().getValues();
+      let updated = false;
+      
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === 'ศูนย์รวมระบบงาน') {
+          linkSheet.getRange(i + 1, 2).setValue(newUrl);
+          updated = true;
+          break;
+        }
+      }
+      
+      if (!updated) {
+        linkSheet.appendRow(['ศูนย์รวมระบบงาน', newUrl]);
+      }
+    }
+    
+    // 2. ดึงอีเมลทุกคนจาก Sheet "Permission"
+    let permSheet = ss.getSheetByName('Permission');
+    
+    if (!permSheet) {
+      return { success: false, message: 'ไม่พบ Sheet "Permission"' };
+    }
+    
+    const permData = permSheet.getDataRange().getValues();
+    const emailList = [];
+    
+    for (let i = 1; i < permData.length; i++) {
+      if (permData[i][0] && permData[i][0].toString().includes('@')) {
+        emailList.push(permData[i][0]);
+      }
+    }
+    
+    if (emailList.length === 0) {
+      return { success: true, message: 'อัปเดตลิงค์สำเร็จ แต่ไม่มีผู้ใช้ในระบบ', successCount: 0, totalCount: 0 };
+    }
+    
+    // 3. ส่งอีเมลแบบ Batch
+    const subject = '🔔 แจ้งเตือน: ลิงค์เข้าศูนย์รวมระบบงานเปลี่ยนแปลง';
+    const body = `เรียน ผู้ใช้งานระบบ\n\n` +
+                 `ระบบศูนย์รวมระบบงานได้มีการเปลี่ยนแปลงลิงค์เข้าใช้งานใหม่\n\n` +
+                 `🔗 ลิงค์เข้าใช้งานใหม่:\n${newUrl}\n\n` +
+                 `กรุณาบุ๊คมาร์คหรือบันทึกลิงค์ใหม่นี้เพื่อความสะดวกในการเข้าใช้งาน\n\n` +
+                 `หากมีปัญหาหรือข้อสงสัย กรุณาติดต่อ Admin\n\n` +
+                 `ขอบคุณที่ใช้งานระบบครับ/ค่ะ\n` +
+                 `ทีมงานระบบ`;
+    
+    const htmlBody = `
+      <div style="font-family: 'Kanit', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px 15px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">🔔 แจ้งเตือนสำคัญ</h1>
+        </div>
+        
+        <div style="background: white; padding: 30px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+          <h2 style="color: #667eea; margin-top: 0;">ลิงค์เข้าศูนย์รวมระบบงานเปลี่ยนแปลง</h2>
+          
+          <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0; color: #856404;">
+              <strong>⚠️ สำคัญ:</strong> ระบบได้มีการเปลี่ยนแปลงลิงค์เข้าใช้งานใหม่
+            </p>
+          </div>
+          
+          <p style="color: #333; font-size: 16px; line-height: 1.6;">
+            ลิงค์เข้าใช้งานศูนย์รวมระบบงานได้ถูกอัปเดตเป็นลิงค์ใหม่แล้ว กรุณาบุ๊คมาร์คหรือบันทึกลิงค์ใหม่นี้เพื่อความสะดวกในการเข้าใช้งาน
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${newUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+              🚀 เข้าสู่ระบบ (ลิงค์ใหม่)
+            </a>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+            <p style="color: #666; margin: 0; font-size: 14px; text-align: center;">
+              <strong>🔗 ลิงค์ใหม่:</strong><br>
+              <code style="background: white; padding: 10px 15px; border-radius: 5px; color: #667eea; display: inline-block; margin-top: 10px; word-break: break-all;">${newUrl}</code>
+            </p>
+          </div>
+          
+          <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0; color: #1565c0; font-size: 14px;">
+              <strong>💡 เคล็ดลับ:</strong> กด Ctrl+D (Windows) หรือ Cmd+D (Mac) เพื่อบุ๊คมาร์คหน้านี้
+            </p>
+          </div>
+          
+          <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+          
+          <p style="color: #666; font-size: 14px; text-align: center; margin: 0;">
+            หากมีปัญหาหรือข้อสงสัย กรุณาติดต่อ Admin<br><br>
+            ขอบคุณที่ใช้งานระบบครับ/ค่ะ<br>
+            <strong>ทีมงานระบบ</strong>
+          </p>
+        </div>
+      </div>
+    `;
+    
+    // ส่งอีเมลแบบ Batch (แบ่งกลุ่ม 100 คนต่อครั้ง)
+    const batchSize = 100;
+    let successCount = 0;
+    
+    for (let i = 0; i < emailList.length; i += batchSize) {
+      const batch = emailList.slice(i, i + batchSize);
+      
+      try {
+        MailApp.sendEmail({
+          to: batch[0],
+          bcc: batch.slice(1).join(','),
+          subject: subject,
+          body: body,
+          htmlBody: htmlBody,
+          name: 'ศูนย์รวมระบบงาน'
+        });
+        successCount += batch.length;
+        Logger.log('✅ ส่งอีเมล Batch ' + (Math.floor(i/batchSize) + 1) + ': ' + batch.length + ' คน');
+      } catch (e) {
+        Logger.log('❌ Batch ' + (Math.floor(i/batchSize) + 1) + ' ไม่สำเร็จ: ' + e);
+      }
+    }
+    
+    return { 
+      success: true, 
+      successCount: successCount, 
+      totalCount: emailList.length 
+    };
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error);
+    return { success: false, message: error.toString() };
+  }
+}
+
+// ============================================
+// ✨ เพิ่มฟังก์ชันนี้ใน MenuAPP.gs
+// ============================================
+
+// วางไว้หลัง function getVersion()
+function getManualUrl() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let linkSheet = ss.getSheetByName('Link');
+    
+    if (!linkSheet) {
+      Logger.log('⚠️ ไม่พบ Sheet "Link"');
+      return null;
+    }
+    
+    const data = linkSheet.getDataRange().getValues();
+    
+    // หา URL ที่ column A = "ศูนย์รวมระบบงาน"
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === 'ศูนย์รวมระบบงาน' && data[i][1]) {
+        const baseUrl = data[i][1];
+        const manualUrl = baseUrl + '?page=manual';
+        Logger.log('✅ Manual URL: ' + manualUrl);
+        return manualUrl;
+      }
+    }
+    
+    Logger.log('⚠️ ไม่พบ URL ในระบบ');
+    return null;
+    
+  } catch (e) {
+    Logger.log('❌ Error: ' + e);
+    return null;
+  }
+}
+
+// ฟังก์ชันดึงคำขอทั้งหมด
+function getAllAppRequests() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let requestSheet = ss.getSheetByName('AppRequest');
+  
+  if (!requestSheet) {
+    return [];
+  }
+  
+  const lastRow = requestSheet.getLastRow();
+  if (lastRow <= 1) {
+    return [];
+  }
+  
+  const data = requestSheet.getRange(1, 1, lastRow, 6).getValues();
+  const requests = [];
+  
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (data[i][0]) {
+      const timestamp = data[i][0] instanceof Date ? data[i][0].toISOString() : String(data[i][0] || '');
+      
+      requests.push({
+        rowIndex: i + 1,
+        timestamp: timestamp,
+        userEmail: String(data[i][1] || ''),
+        name: String(data[i][2] || ''),
+        requestedApps: String(data[i][3] || ''),
+        note: String(data[i][4] || ''),
+        status: String(data[i][5] || 'รออนุมัติ')
+      });
+    }
+  }
+  
+  return requests;
+}
+
+// ฟังก์ชันอนุมัติคำขอและเพิ่มสิทธิ์ให้ผู้ใช้
+function approveAppRequest(rowIndex, userEmail, requestedApps) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const adminEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(adminEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // 1. อัปเดตสถานะในคำขอ
+    let requestSheet = ss.getSheetByName('AppRequest');
+    if (requestSheet) {
+      requestSheet.getRange(rowIndex, 6).setValue('อนุมัติแล้ว (' + new Date().toLocaleDateString('th-TH') + ')');
+    }
+    
+    // 2. เพิ่มสิทธิ์ให้ผู้ใช้
+    const appsArray = requestedApps.split(', ').map(app => app.trim());
+    
+    let permSheet = ss.getSheetByName('Permission');
+    if (!permSheet) {
+      permSheet = ss.insertSheet('Permission');
+      permSheet.appendRow(['UserEmail', 'Apps', 'Name', 'Note']);
+    }
+    
+    const data = permSheet.getDataRange().getValues();
+    let existingRow = -1;
+    let existingApps = [];
+    
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] && data[i][0].toLowerCase() === userEmail.toLowerCase()) {
+        existingRow = i + 1;
+        if (data[i][1]) {
+          try {
+            existingApps = JSON.parse(data[i][1]);
+          } catch (e) {
+            existingApps = [];
+          }
+        }
+        break;
+      }
+    }
+    
+    // รวมแอปเดิมกับแอปใหม่ (ไม่ซ้ำกัน)
+    const mergedApps = [...new Set([...existingApps, ...appsArray])];
+    
+    if (existingRow > 0) {
+      permSheet.getRange(existingRow, 2).setValue(JSON.stringify(mergedApps));
+    } else {
+      // ถ้ายังไม่มี ให้สร้างใหม่
+      const name = requestSheet ? requestSheet.getRange(rowIndex, 3).getValue() : '';
+      permSheet.appendRow([userEmail, JSON.stringify(mergedApps), name, '']);
+    }
+    
+    // 3. ส่งอีเมลแจ้งผู้ใช้
+    notifyPermissionChange(userEmail, mergedApps, existingApps.length === 0);
+    
+    return { success: true, message: 'อนุมัติและเพิ่มสิทธิ์สำเร็จ' };
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error);
+    return { success: false, message: error.toString() };
+  }
+}
+
+// ฟังก์ชันปฏิเสธคำขอ
+function rejectAppRequest(rowIndex, userEmail, reason) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const adminEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(adminEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let requestSheet = ss.getSheetByName('AppRequest');
+    
+    if (!requestSheet) {
+      return { success: false, message: 'ไม่พบข้อมูล' };
+    }
+    
+    // อัปเดตสถานะ
+    const rejectStatus = 'ปฏิเสธ (' + new Date().toLocaleDateString('th-TH') + ')';
+    requestSheet.getRange(rowIndex, 6).setValue(rejectStatus);
+    
+    // ส่งอีเมลแจ้งผู้ใช้
+    const subject = '❌ คำขอเข้าใช้ระบบไม่ได้รับการอนุมัติ';
+    const body = `เรียน ผู้ใช้งานระบบ\n\n` +
+                 `ขออภัย คำขอเข้าใช้ระบบของคุณไม่ได้รับการอนุมัติ\n\n` +
+                 `เหตุผล: ${reason || 'ไม่ระบุ'}\n\n` +
+                 `หากมีข้อสงสัย กรุณาติดต่อ Admin\n\n` +
+                 `ขอบคุณครับ/ค่ะ`;
+    
+    try {
+      MailApp.sendEmail(userEmail, subject, body);
+    } catch (e) {
+      Logger.log('ไม่สามารถส่งอีเมลได้: ' + e);
+    }
+    
+    return { success: true };
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error);
+    return { success: false, message: error.toString() };
+  }
+}
+
+// ฟังก์ชันลบคำขอ
+function deleteAppRequest(rowIndex) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let requestSheet = ss.getSheetByName('AppRequest');
+  
+  if (!requestSheet) {
+    return { success: false, message: 'ไม่พบข้อมูล' };
+  }
+  
+  requestSheet.deleteRow(rowIndex);
+  return { success: true };
+}
+
+// เพิ่มฟังก์ชันนี้ใน MenuAPP.gs
+
+function deleteUser(email) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  if (!isAdmin(userEmail)) {
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let permSheet = ss.getSheetByName('Permission');
+    
+    if (!permSheet) {
+      return { success: false, message: 'ไม่พบ Sheet Permission' };
+    }
+    
+    const data = permSheet.getDataRange().getValues();
+    
+    // หาแถวที่ตรงกับอีเมลที่ต้องการลบ
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] && data[i][0].toLowerCase() === email.toLowerCase()) {
+        permSheet.deleteRow(i + 1);
+        Logger.log('✅ ลบผู้ใช้: ' + email);
+        return { success: true, message: 'ลบผู้ใช้สำเร็จ' };
+      }
+    }
+    
+    return { success: false, message: 'ไม่พบผู้ใช้นี้ในระบบ' };
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error);
+    return { success: false, message: error.toString() };
+  }
+}
+
+// ================================
+// 👑 ระบบจัดการ Admin
+// ================================
+
+function addAdmin(email) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  Logger.log('=== addAdmin START ===');
+  Logger.log('Requester: ' + userEmail);
+  Logger.log('New Admin: ' + email);
+  
+  if (!isSuperAdmin(userEmail)) {
+    Logger.log('❌ Not Super Admin');
+    return { success: false, message: 'เฉพาะ Super Admin เท่านั้นที่สามารถเพิ่ม Admin ได้' };
+  }
+  
+  if (!email || !email.includes('@')) {
+    Logger.log('❌ Invalid email');
+    return { success: false, message: 'รูปแบบอีเมลไม่ถูกต้อง' };
+  }
+  
+  if (isSuperAdmin(email)) {
+    Logger.log('❌ Cannot add Super Admin');
+    return { success: false, message: 'ไม่สามารถเพิ่ม Super Admin ได้' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let adminSheet = ss.getSheetByName('Admins');
+  
+  if (!adminSheet) {
+    Logger.log('❌ Sheet not found');
+    return { success: false, message: 'ไม่พบ Sheet Admins' };
+  }
+  
+  const data = adminSheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toLowerCase() === email.toLowerCase()) {
+      Logger.log('⚠️ Already admin');
+      return { success: false, message: 'อีเมลนี้เป็น Admin อยู่แล้ว' };
+    }
+  }
+  
+  const timestamp = new Date();
+  adminSheet.appendRow([email, timestamp, userEmail, 'Admin']);
+  
+  Logger.log('✅ Admin added successfully');
+  
+  // ✅ ดึงลิงก์จาก Sheet "Link"
+  const webAppUrl = getWebAppUrl();
+  
+  // ส่งอีเมลแจ้งผู้ที่ได้รับสิทธิ์
+  try {
+    const subject = '👑 คุณได้รับสิทธิ์ Admin ในศูนย์รวมระบบงาน';
+    const body = `เรียน ${email}\n\n` +
+                 `คุณได้รับสิทธิ์ผู้ดูแลระบบ (Admin) ในศูนย์รวมระบบงาน\n\n` +
+                 `สิทธิ์ของ Admin:\n` +
+                 `✅ เพิ่ม/แก้ไข/ลบระบบงาน\n` +
+                 `✅ จัดการสิทธิ์ผู้ใช้\n` +
+                 `✅ ดูและตอบรายงานปัญหา\n` +
+                 `✅ จัดการคำขอเข้าใช้งาน\n\n` +
+                 `⚠️ หมายเหตุ: คุณไม่สามารถเพิ่ม/ลบ Admin คนอื่นได้\n` +
+                 `เฉพาะ Super Admin (${userEmail}) เท่านั้น\n\n` +
+                 `🔗 เข้าใช้งานศูนย์รวมระบบงาน:\n${webAppUrl || 'กรุณาติดต่อ Super Admin เพื่อขอลิงก์'}\n\n` +
+                 `ผู้มอบสิทธิ์: ${userEmail}\n` +
+                 `วันที่: ${timestamp.toLocaleString('th-TH')}\n\n` +
+                 `กรุณาใช้สิทธิ์อย่างรับผิดชอบ\n\n` +
+                 `ขอบคุณครับ/ค่ะ\n` +
+                 `ทีมงานระบบ`;
+    
+    // สร้าง HTML Email สวยงาม
+    const htmlBody = `
+      <div style="font-family: 'Kanit', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px 15px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">👑 ยินดีต้อนรับ Admin</h1>
+        </div>
+        
+        <div style="background: white; padding: 30px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+          <h2 style="color: #667eea; margin-top: 0;">คุณได้รับสิทธิ์ผู้ดูแลระบบ</h2>
+          
+          <div style="background: #f0f7ff; border-left: 4px solid #667eea; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0; color: #1565c0;">
+              <strong>🎉 ยินดีด้วย!</strong> คุณได้รับสิทธิ์ Admin ในศูนย์รวมระบบงาน
+            </p>
+          </div>
+          
+          <h3 style="color: #333; margin-top: 20px;">📋 สิทธิ์ที่คุณได้รับ:</h3>
+          <ul style="color: #666; line-height: 2;">
+            <li>✅ เพิ่ม/แก้ไข/ลบระบบงาน</li>
+            <li>✅ จัดการสิทธิ์ผู้ใช้</li>
+            <li>✅ ดูและตอบรายงานปัญหา</li>
+            <li>✅ จัดการคำขอเข้าใช้งาน</li>
+          </ul>
+          
+          <div style="background: #fff3cd; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0; color: #856404;">
+              <strong>⚠️ หมายเหตุ:</strong> คุณไม่สามารถเพิ่ม/ลบ Admin คนอื่นได้<br>
+              เฉพาะ Super Admin เท่านั้น
+            </p>
+          </div>
+          
+          ${webAppUrl ? `
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${webAppUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+                🚀 เข้าสู่ระบบ
+              </a>
+            </div>
+            
+            <p style="color: #999; font-size: 14px; text-align: center; margin-top: 20px;">
+              หรือคัดลอกลิงก์นี้:<br>
+              <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 5px; color: #667eea;">${webAppUrl}</code>
+            </p>
+          ` : ''}
+          
+          <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+          
+          <p style="color: #666; font-size: 14px;">
+            <strong>ผู้มอบสิทธิ์:</strong> ${userEmail}<br>
+            <strong>วันที่:</strong> ${timestamp.toLocaleString('th-TH')}
+          </p>
+          
+          <p style="color: #999; font-size: 14px; text-align: center; margin: 20px 0 0 0;">
+            กรุณาใช้สิทธิ์อย่างรับผิดชอบ<br>
+            <strong>ทีมงานระบบ</strong>
+          </p>
+        </div>
+      </div>
+    `;
+    
+    MailApp.sendEmail({
+      to: email,
+      subject: subject,
+      body: body,
+      htmlBody: htmlBody,
+      name: 'ศูนย์รวมระบบงาน'
+    });
+    Logger.log('📧 Email sent to new admin');
+  } catch (e) {
+    Logger.log('⚠️ Cannot send email: ' + e);
+  }
+  
+  Logger.log('=== addAdmin END ===');
+  return { success: true, message: 'เพิ่ม Admin สำเร็จ' };
+}
+
+// ลบ Admin
+function removeAdmin(email) {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  Logger.log('=== removeAdmin START ===');
+  Logger.log('Requester: ' + userEmail);
+  Logger.log('Remove: ' + email);
+  
+  if (!isSuperAdmin(userEmail)) {
+    Logger.log('❌ Not Super Admin');
+    return { success: false, message: 'เฉพาะ Super Admin เท่านั้นที่สามารถลบ Admin ได้' };
+  }
+  
+  if (isSuperAdmin(email)) {
+    Logger.log('❌ Cannot remove Super Admin');
+    return { success: false, message: 'ไม่สามารถลบ Super Admin ได้' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let adminSheet = ss.getSheetByName('Admins');
+  
+  if (!adminSheet) {
+    Logger.log('❌ Sheet not found');
+    return { success: false, message: 'ไม่พบ Sheet Admins' };
+  }
+  
+  // ✅ ดึงลิงก์จาก Sheet "Link"
+  const webAppUrl = getWebAppUrl();
+  
+  const data = adminSheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toLowerCase() === email.toLowerCase()) {
+      adminSheet.deleteRow(i + 1);
+      
+      // ส่งอีเมลแจ้ง
+      try {
+        const subject = '🔔 สิทธิ์ Admin ของคุณถูกเพิกถอน';
+        const body = `เรียน ${email}\n\n` +
+                     `สิทธิ์ผู้ดูแลระบบ (Admin) ของคุณถูกเพิกถอนโดย Super Admin: ${userEmail}\n` +
+                     `วันที่: ${new Date().toLocaleString('th-TH')}\n\n` +
+                     `คุณยังคงสามารถใช้งานระบบในฐานะผู้ใช้ทั่วไปได้\n\n` +
+                     `🔗 เข้าใช้งานศูนย์รวมระบบงาน:\n${webAppUrl || 'กรุณาติดต่อ Super Admin'}\n\n` +
+                     `หากมีข้อสงสัย กรุณาติดต่อ Super Admin\n\n` +
+                     `ขอบคุณครับ/ค่ะ`;
+        
+        const htmlBody = `
+          <div style="font-family: 'Kanit', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+            <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; border-radius: 15px 15px 0 0; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">🔔 แจ้งเตือนสิทธิ์</h1>
+            </div>
+            
+            <div style="background: white; padding: 30px; border-radius: 0 0 15px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+              <h2 style="color: #ef4444; margin-top: 0;">สิทธิ์ Admin ของคุณถูกเพิกถอน</h2>
+              
+              <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p style="margin: 0; color: #991b1b;">
+                  สิทธิ์ผู้ดูแลระบบของคุณถูกเพิกถอนโดย Super Admin
+                </p>
+              </div>
+              
+              <p style="color: #666; font-size: 14px;">
+                <strong>Super Admin:</strong> ${userEmail}<br>
+                <strong>วันที่:</strong> ${new Date().toLocaleString('th-TH')}
+              </p>
+              
+              <div style="background: #f0f7ff; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p style="margin: 0; color: #1e40af;">
+                  <strong>ℹ️ หมายเหตุ:</strong> คุณยังคงสามารถใช้งานระบบในฐานะผู้ใช้ทั่วไปได้ตามปกติ
+                </p>
+              </div>
+              
+              ${webAppUrl ? `
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${webAppUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+                    🔗 เข้าสู่ระบบ
+                  </a>
+                </div>
+                
+                <p style="color: #999; font-size: 14px; text-align: center; margin-top: 20px;">
+                  หรือคัดลอกลิงก์นี้:<br>
+                  <code style="background: #f0f0f0; padding: 5px 10px; border-radius: 5px; color: #667eea;">${webAppUrl}</code>
+                </p>
+              ` : ''}
+              
+              <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+              
+              <p style="color: #999; font-size: 14px; text-align: center; margin: 0;">
+                หากมีข้อสงสัย กรุณาติดต่อ Super Admin<br>
+                <strong>ทีมงานระบบ</strong>
+              </p>
+            </div>
+          </div>
+        `;
+        
+        MailApp.sendEmail({
+          to: email,
+          subject: subject,
+          body: body,
+          htmlBody: htmlBody,
+          name: 'ศูนย์รวมระบบงาน'
+        });
+      } catch (e) {
+        Logger.log('⚠️ Cannot send email: ' + e);
+      }
+      
+      Logger.log('✅ Admin removed successfully');
+      return { success: true, message: 'ลบ Admin สำเร็จ' };
+    }
+  }
+  
+  Logger.log('❌ Admin not found');
+  return { success: false, message: 'ไม่พบ Admin นี้' };
+}
+
+// ดูรายชื่อ Admin ทั้งหมด
+function getAllAdmins() {
+  const currentUser = Session.getActiveUser().getEmail();
+  const effectiveUser = Session.getEffectiveUser().getEmail();
+  const userEmail = currentUser || effectiveUser;
+  
+  Logger.log('=== getAllAdmins START ===');
+  Logger.log('Requester: ' + userEmail);
+  
+  if (!isAdmin(userEmail)) {
+    Logger.log('❌ Not authorized');
+    return { success: false, message: 'คุณไม่มีสิทธิ์' };
+  }
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let adminSheet = ss.getSheetByName('Admins');
+  
+  if (!adminSheet) {
+    Logger.log('❌ Sheet not found');
+    return [];
+  }
+  
+  const data = adminSheet.getDataRange().getValues();
+  const admins = [];
+  const isSuperAdminUser = isSuperAdmin(userEmail);
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0]) {
+      const role = data[i][3] || 'Admin';
+      const isSuperAdminRow = isSuperAdmin(data[i][0]);
+      
+      admins.push({
+        email: data[i][0],
+        addedDate: data[i][1] ? new Date(data[i][1]).toLocaleString('th-TH') : '-',
+        addedBy: data[i][2] || '-',
+        role: isSuperAdminRow ? '👑 Super Admin' : '👤 Admin',
+        // ✅ เฉพาะ Super Admin เท่านั้นที่ลบ Admin คนอื่นได้
+        // และไม่สามารถลบตัวเอง หรือ Super Admin ได้
+        canDelete: isSuperAdminUser && 
+                   !isSuperAdminRow && 
+                   data[i][0].toLowerCase() !== userEmail.toLowerCase()
+      });
+    }
+  }
+  
+  Logger.log('Found ' + admins.length + ' admins');
+  Logger.log('=== getAllAdmins END ===');
+  
+  return admins;
+}
+
+// ฟังก์ชันดึงอีเมล Admin ทั้งหมด (รวม Super Admin)
+function getAllAdminEmails() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let adminSheet = ss.getSheetByName('Admins');
+  
+  const adminEmails = [];
+  
+  // เพิ่ม Super Admin เป็นคนแรกเสมอ
+  adminEmails.push('setthawut.se11@gmail.com');
+  
+  if (!adminSheet) {
+    Logger.log('⚠️ ไม่พบ Sheet Admins - ส่งให้ Super Admin เท่านั้น');
+    return adminEmails;
+  }
+  
+  const data = adminSheet.getDataRange().getValues();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].includes('@')) {
+      const email = data[i][0].toLowerCase();
+      // ป้องกันการเพิ่ม Super Admin ซ้ำ
+      if (email !== 'setthawut.se11@gmail.com'.toLowerCase() && 
+          !adminEmails.includes(email)) {
+        adminEmails.push(data[i][0]);
+      }
+    }
+  }
+  
+  Logger.log('📧 พบ Admin ทั้งหมด: ' + adminEmails.length + ' คน');
+  Logger.log('Admin Emails: ' + adminEmails.join(', '));
+  
+  return adminEmails;
+}
+
+// ================================
+// 📊 นับจำนวนคำขอและรายงานใหม่
+// ================================
+
+// นับคำขอที่รออนุมัติ
+function getPendingRequestsCount() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let requestSheet = ss.getSheetByName('AppRequest');
+    
+    if (!requestSheet) return 0;
+    
+    const lastRow = requestSheet.getLastRow();
+    if (lastRow <= 1) return 0;
+    
+    const data = requestSheet.getRange(1, 1, lastRow, 6).getValues();
+    let count = 0;
+    
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] && data[i][5] === 'รออนุมัติ') {
+        count++;
+      }
+    }
+    
+    return count;
+  } catch (error) {
+    Logger.log('Error getPendingRequestsCount: ' + error);
+    return 0;
+  }
+}
+
+
+// นับรายงานที่รอดำเนินการ
+function getPendingReportsCount() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let reportSheet = ss.getSheetByName('Report');
+    
+    if (!reportSheet) return 0;
+    
+    const lastRow = reportSheet.getLastRow();
+    if (lastRow <= 1) return 0;
+    
+    const data = reportSheet.getRange(1, 1, lastRow, 6).getValues();
+    let count = 0;
+    
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] && (data[i][3] === 'รอดำเนินการ' || !data[i][4])) {
+        count++;
+      }
+    }
+    
+    return count;
+  } catch (error) {
+    Logger.log('Error getPendingReportsCount: ' + error);
+    return 0;
+  }
+}
+
+// ดึงจำนวนทั้งหมดพร้อมกัน (สำหรับ Admin)
+function getAllPendingCounts() {
+  return {
+    requests: getPendingRequestsCount(),
+    reports: getPendingReportsCount()
+  };
+}
+
